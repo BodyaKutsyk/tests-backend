@@ -1,0 +1,356 @@
+openapi: 3.0.0
+security: []
+info:
+  title: Test Generator API
+  description: A test generator tool for the effective education
+  version: 1.0.0
+servers:
+  - url: http://localhost:80
+    description: main api
+
+paths:
+  /files:
+    get:
+      summary: Retrieve all uploaded files
+      operationId: getFiles
+      description: Returns a paginated list of uploaded files
+      tags:
+        - Files
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        200:
+          description: Files were sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/File'
+                  next_cursor:
+                    nullable: true
+                    type: string
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - Files
+      operationId: uploadFile
+      summary: Upload file
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: string
+              format: binary
+      responses:
+        201:
+          description: File was successfully uploaded
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        409:
+          $ref: '#/components/responses/ConflictError'
+        422:
+          $ref: '#/components/responses/UnprocessableError'
+  /files/${fileId}:
+    get:
+      tags:
+        - Files
+      operationId: getFile
+      summary: Get specific file based on id
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: File with specific id was sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Files
+      operationId: deleteFile
+      summary: Delete specific file based on id
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: File was deleted successfully
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+  /users:
+    get:
+      summary: Retrieve paginated users
+      description: Returns a paginated list of users
+      operationId: getUsers
+      tags:
+        - Users
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        200:
+          description: Users were sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserResponse'
+                  next_cursor:
+                    nullable: true
+                    type: string
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      summary: Create new user
+      description: Create new user with UserDto type
+      operationId: createUser
+      tags:
+        - Users
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        description: Payload type for the user creation
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDto'
+      responses:
+        204:
+          description: 'User was successfully created'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        409:
+          $ref: '#/components/responses/ConflictError'
+        422:
+          $ref: '#/components/responses/UnprocessableError'
+  /users/${id}:
+    get:
+      summary: Get existing user by id
+      description: Returns user from the requested id
+      operationId: getUser
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: User was found and returned successfully by the requested id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete existing user by id
+      description: Removes user by the requested id
+      operationId: deleteUser
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: User was deleted successfully
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  schemas:
+    File:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d3b07384-d113-4956-a5e2-aa591974421b
+        name:
+          type: string
+          format: string
+          example: my_boring_book.pdf
+        size:
+          type: number
+          example: 10240000128
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-08-28T07:00:00Z'
+      required:
+        - id
+        - name
+        - size
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d3b07384-d114-4956-a5e2-aa591974421b
+        email:
+          type: string
+          format: email
+          example: jane@doe.com
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-08-28T07:00:00Z'
+      required:
+        - id
+        - email
+
+    UserDto:
+      type: object
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 8
+        email:
+          type: string
+          format: email
+          example: jane@doe.com
+      required:
+        - email
+        - password
+
+    Error:
+      type: object
+      required:
+        - status
+        - title
+        - detail
+        - type
+        - instance
+      properties:
+        status:
+          type: number
+          example: 500
+        title:
+          type: string
+          example: Internal Server Error
+        detail:
+          type: string
+          example: Something went wrong
+        instance:
+          type: string
+          format: uri-refence
+          example: /resource/123/msgs/1
+        type:
+          type: string
+          format: uri
+          example: https://example.com/problems/internal-server-error
+
+  parameters:
+    IdempotencyKey:
+      name: idempotency-key
+      in: header
+      description: An idempotency key used to prevent duplicated requests and conflicts. With this key handler compares request body with the existing fingerprint
+      required: true
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      description: Query parameter used to get limited data based on limit value
+      required: false
+      schema:
+        type: number
+        default: 10
+        maximum: 100
+    Cursor:
+      name: cursor
+      in: query
+      description: Token used to track last sent item. Can be retrieved from POST response value next_cursor. If next_cursor = null than no data remained to send
+      required: false
+      schema:
+        type: string
+
+  responses:
+    UnauthorizedError:
+      description: Authorization key is missing
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 401
+            title: Unauthorized error
+            detail: Invalid authorization header
+            type: https://example.com/problems/unauthorize
+            instance: /resource
+    NotFoundError:
+      description: Resource is not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 404
+            title: Not Found
+            detail: Resource is not found
+            type: https://example.com/problems/not-found
+            instance: /resource
+    ConflictError:
+      description: Conflict with the current state of the target resource
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 409
+            title: Conflict
+            detail: Conflict with the current state of the target resource
+            type: https://example.com/problem/conflict
+            instance: /resource
+    UnprocessableError:
+      description: The request can not be processed due to semantic or validation error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 422
+            title: Unprocessable content
+            detail: Failed to process due to validation error
+            type: https://example.com/problem/unprocessable
+            instance: /resource
