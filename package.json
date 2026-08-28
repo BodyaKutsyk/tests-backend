@@ -1,8 +1,10 @@
 {
-  "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
-  },
   "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "openapi:lint": "npx @redocly/cli lint openapi/openapi.yaml",
+    "openapi:build": "npx @redocly/cli build-docs openapi/openapi.yaml -o openapi/docs.html"
+  },
   "devDependencies": {
     "@jest/globals": "^30.5.0",
     "@pact-foundation/pact": "^17.1.3",
