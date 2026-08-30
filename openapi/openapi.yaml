@@ -58,7 +58,7 @@ paths:
           $ref: '#/components/responses/ConflictError'
         422:
           $ref: '#/components/responses/UnprocessableError'
-  /files/${fileId}:
+  /files/{fileId}:
     get:
       tags:
         - Files
@@ -142,7 +142,7 @@ paths:
             schema:
               $ref: '#/components/schemas/UserDto'
       responses:
-        204:
+        201:
           description: 'User was successfully created'
         401:
           $ref: '#/components/responses/UnauthorizedError'
@@ -150,7 +150,7 @@ paths:
           $ref: '#/components/responses/ConflictError'
         422:
           $ref: '#/components/responses/UnprocessableError'
-  /users/${id}:
+  /users/{id}:
     get:
       summary: Get existing user by id
       description: Returns user from the requested id
@@ -187,7 +187,7 @@ paths:
           schema:
             type: string
       responses:
-        201:
+        204:
           description: User was deleted successfully
         401:
           $ref: '#/components/responses/UnauthorizedError'
@@ -253,7 +253,7 @@ components:
         - email
         - password
 
-    Error:
+    Problem:
       type: object
       required:
         - status
@@ -301,6 +301,7 @@ components:
       name: cursor
       in: query
       description: Token used to track last sent item. Can be retrieved from POST response value next_cursor. If next_cursor = null than no data remained to send
+
       required: false
       schema:
         type: string
@@ -311,7 +312,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/Problem'
           example:
             status: 401
             title: Unauthorized error
@@ -323,7 +324,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/Problem'
           example:
             status: 404
             title: Not Found
@@ -335,7 +336,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/Problem'
           example:
             status: 409
             title: Conflict
@@ -347,7 +348,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/Problem'
           example:
             status: 422
             title: Unprocessable content
