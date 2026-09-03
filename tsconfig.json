@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+     "outDir": "./dist",
+    "rootDir": ".",
+    "module": "nodenext",
+    "target": "esnext",
+    "types": ["node", "jest"],
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "lib": ["esnext", "dom"],
+
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "strict": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  }
+}

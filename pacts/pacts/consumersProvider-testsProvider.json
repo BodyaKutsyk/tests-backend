@@ -1,0 +1,58 @@
+{
+  "consumer": {
+    "name": "consumersProvider"
+  },
+  "interactions": [
+    {
+      "description": "a request to get users",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "limit": [
+            "10"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": {
+            "items": [
+              {
+                "createdAt": "2026-08-28T14:30:00Z",
+                "email": "test@example.com",
+                "id": "d3b07384-d113-4956-a5e2-aa591974421b"
+              }
+            ],
+            "next_cursor": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVC"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "17.1.3"
+    },
+    "pactRust": {
+      "ffi": "0.5.6",
+      "models": "1.3.14"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "testsProvider"
+  }
+}
