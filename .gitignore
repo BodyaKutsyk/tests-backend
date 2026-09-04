@@ -1,2 +1,7 @@
 node_modules
 .idea
+dist
+.env*
+tsconfig.build.tsbuildinfo
+test
+secrets
