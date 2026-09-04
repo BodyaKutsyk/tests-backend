@@ -3,4 +3,5 @@ node_modules
 .gitignore
 Dockerfile
 dist
-.env*
+.env
+secrets

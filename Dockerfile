@@ -1,14 +1,14 @@
 FROM ghcr.io/pnpm/pnpm:11 AS base
 RUN pnpm runtime set node 24 -g
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
-FROM base as dev-deps
-COPY .  ./
+FROM base AS dev-deps
 RUN pnpm i
+COPY .  .
 
 FROM base AS build
 COPY tsconfig.json ./
