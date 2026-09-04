@@ -1,0 +1,10 @@
+services:
+  api:
+    container_name: core_api_prod
+    ports:
+      - "${API_EXTERNAL_PORT}:${API_INTERNAL_PORT}"
+    env_file:
+      - .env
+    build:
+      context: .
+      target: prod
