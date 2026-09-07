@@ -2,6 +2,7 @@ node_modules
 .idea
 dist
 .env*
+!.env.example
 tsconfig.build.tsbuildinfo
 test
 secrets

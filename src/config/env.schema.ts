@@ -21,5 +21,5 @@ export function validate(config: Record<string, unknown>) {
     throw new Error(JSON.stringify(errors.fieldErrors));
   }
 
-  return result;
+  return result.data;
 }
