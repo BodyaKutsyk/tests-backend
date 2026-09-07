@@ -8,6 +8,10 @@ services:
     build:
       context: .
       target: prod
+    depends_on:
+      db:
+        condition: service_healthy
+
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     secrets:

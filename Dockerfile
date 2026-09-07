@@ -14,12 +14,15 @@ FROM base AS build
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm run build
+RUN pnpm build
 
 FROM dev-deps AS dev
 CMD ["pnpm", "start"]
+HEALTHCHECK --interval=5s --timeout=3s \
+    CMD node src/utils/api-health-check.ts || exit 1
 
-FROM base AS prod
-COPY --from=prod-deps /app/node_modules /app/node_modules
+FROM prod-deps AS prod
 COPY --from=build /app/dist /app/dist
 CMD [ "pnpm", "start:prod" ]
+HEALTHCHECK --interval=5s --timeout=3s \
+    CMD node dist/utils/api-health-check.js || exit 1

@@ -24,11 +24,11 @@
     "openapi:build": "npx @redocly/cli build-docs openapi/openapi.yaml -o openapi/docs.html",
     "check:env": "node scripts/check-env-example.mjs",
     "docker:build": "docker compose build",
-    "docker:build:prod": "docker compose -f docker-compose.yml build",
-    "docker:start:dev": "npm run docker:build && docker compose up --watch",
+    "docker:build:prod": "docker compose -f docker-compose.yaml build",
+    "docker:start:dev": "pnpm docker:build && docker compose up --watch",
     "docker:stop:dev": "docker compose down",
-    "docker:start:prod": "npm run docker:build:prod && docker compose -f docker-compose.yml up -d",
-    "docker:stop:prod": "docker compose -f docker-compose.yml down"
+    "docker:start:prod": "pnpm docker:build:prod && docker compose -f docker-compose.yaml up -d",
+    "docker:stop:prod": "docker compose -f docker-compose.yaml down"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
