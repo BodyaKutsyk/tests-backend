@@ -1,3 +1,39 @@
+# Test generator
+## About
+Test generator is the educational AI platform providing a useful and efficient way to study by creating and managing tests. 
+You can upload an article or other type of data and with AI get tests for training.  
+
+User stories:
+- As a **student** I can upload .md or .txt files and receive tests for education.
+- As a **student** I can configure test to set up how many questions I want to get
+- As a **student** I can configure test to get an open-ended or multiple-choice type of answers
+
+You can upload .md/.txt files, set an amount and get wanted tests. Also, you can choose whenever you need open-ended or multiple-choice tests.
+
+
+[//]: # (треба продумати для розгорнутих відповідей для Response )
+
+## Domain
+1. User id: uuid, email: string, passwordHash: string, firstName: string, lastName: string, createdAt: date
+
+2. Test id: uuid, name: string, userId: uuid, documentId: uuid, createdAt: date
+3. Question id: uuid, testId: uuid, type: "open-ended" | "multiple-choice", value: string, createdAt: date
+4. AnswerOption id: uuid, questionId: uuid, value: string, isCorrect: boolean, createdAt: date
+
+5. Document id: uuid, size: number, type: ("md", "txt"), storageKey: string, userId: uuid, createdAt: date 
+6. GenerationJob id: uuid, status: string ("queued", "parsing", "generating", "done", "failed"), questionType: "open-ended" | "multiple-choice", questionCount: number, documentId: uuid, testId: uuid | null, createdAt: date
+7. Attempt id: uuid, testId: uuid, userId: uuid, score: number | null, createdAt: date
+8. Response id: uuid, questionId: uuid, answerOptionId: uuid | null, value: string | null, attemptId: uuid, createdAt: date
+9. Evaluation id: uuid, responseId: uuid, isCorrect: boolean, explanation: string | null, evaluationJobId: uuid, createdAt: date
+10. EvaluationJob id: uuid, attemptId: uuid, status: (queued | evaluating | failed | done) createdAt: date
+11. Quota: id: uuid, type: string ("storage", "generation") limit: (generation: number as count, storage as bytes), used: number, userId: uuid, createdAt: date
+
+## Architecture decisions
+## Trade-offs
+1. The current implementation of the test generator doesn’t support PDF, images and other file types due to its complexity
+2. 
+
+
 ## Installation
 Before starting project you need to install npm packages via `npm i`
 ### OPENAPI
