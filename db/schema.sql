@@ -44,15 +44,6 @@ CREATE TABLE documents (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-/*
-
-7. Attempt id: uuid, testId: uuid, userId: uuid, score: number | null, createdAt: date
-8. Response id: uuid, questionId: uuid, answerOptionId: uuid | null, value: string | null, attemptId: uuid, createdAt: date
-9. Evaluation id: uuid, responseId: uuid, isCorrect: boolean, explanation: string | null, evaluationJobId: uuid, createdAt: date
-10. EvaluationJob id: uuid, attemptId: uuid, status: (queued | evaluating | failed | done) createdAt: date
-
-*/
-
 CREATE TABLE tests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
