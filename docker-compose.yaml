@@ -11,9 +11,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-    environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     secrets:
       - db_password
   db:
