@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { validate } from './config/env.schema.js';
+import { Env, validate } from './config/env.schema.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { readFile } from 'node:fs/promises';
 
@@ -14,10 +14,10 @@ import { readFile } from 'node:fs/promises';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: async (configService: ConfigService<Env, true>) => {
         const DB_PASSWORD_FILE = configService.get(
           'POSTGRES_PASSWORD_FILE',
-        ) as string;
+        );
 
         return {
           type: 'postgres',
