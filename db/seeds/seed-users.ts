@@ -15,6 +15,7 @@ async function* generateUsers() {
       fakerUK.person.firstName(),
       fakerUK.person.lastName(),
       `pswd_hash_${i}`,
+      fakerUK.date.past({ years: 2 }).toISOString()
     ].map(escapeCsv).join(',');
 
     yield row + '\n';
@@ -23,10 +24,13 @@ async function* generateUsers() {
 
 export async function seedUsers(client: Client) {
   const copyStream = client.query(
-    copyFrom(`COPY users (email, first_name, last_name, password_hash) FROM STDIN WITH (FORMAT CSV)`),
-  )
+    copyFrom(
+      `COPY users (email, first_name, last_name, password_hash, created_at) FROM STDIN WITH (FORMAT CSV)`,
+    ),
+  );
   const usersStream = Readable.from(generateUsers());
   await pipeline(usersStream, copyStream);
+  await client.query('VACUUM(ANALYSE) users');
 
   console.log(`Seeded ${USERS_COUNT} users`);
 }

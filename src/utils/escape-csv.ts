@@ -1,6 +1,4 @@
-export type CsvValue = string | number | boolean | null | undefined;
-
-export function escapeCsv(value: CsvValue): CsvValue {
+export function escapeCsv(value: unknown): string {
   if (!value) return '';
   return `"${String(value).replaceAll('"', '""')}"`;
 }

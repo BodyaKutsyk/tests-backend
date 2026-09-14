@@ -174,5 +174,7 @@ BEFORE UPDATE ON evaluations_jobs
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
-
+ALTER TABLE tests
+ADD COLUMN search_vector tsvector
+GENERATED ALWAYS AS (to_tsvector('simple', name || '')) STORED;
 
