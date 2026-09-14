@@ -13,7 +13,9 @@ export class AppController {
   @HttpCode(HttpStatus.OK)
   @Get('health')
   healthCheck() {
-    return;
+    return {
+      uptime: `${Math.floor(process.uptime())} seconds`,
+    };
   }
 
   @Get('database')
