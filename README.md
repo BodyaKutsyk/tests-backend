@@ -1,7 +1,7 @@
 # Test generator
 ## About
-Test generator is the educational AI platform providing a useful and efficient way to study by creating and managing tests. 
-You can upload an article or other type of data and with AI get tests for training.  
+Test Generator is an educational AI-powered platform designed to help students study more efficiently by automatically generating tests from uploaded learning materials.
+Users can upload .md or .txt documents and generate tests based on their content. Before generation, users can configure the number of questions and choose between open-ended and multiple-choice questions.
 
 User stories:
 - As a **student** I can upload .md or .txt files and receive tests for education.
@@ -10,23 +10,141 @@ User stories:
 
 You can upload .md/.txt files, set an amount and get wanted tests. Also, you can choose whenever you need open-ended or multiple-choice tests.
 
-
-[//]: # (треба продумати для розгорнутих відповідей для Response )
-
 ## Domain
-1. User id: uuid, email: string, passwordHash: string, firstName: string, lastName: string, createdAt: date
 
-2. Test id: uuid, name: string, userId: uuid, documentId: uuid, createdAt: date
-3. Question id: uuid, testId: uuid, type: "open-ended" | "multiple-choice", value: string, createdAt: date
-4. AnswerOption id: uuid, questionId: uuid, value: string, isCorrect: boolean, createdAt: date
+### User
 
-5. Document id: uuid, size: number, type: ("md", "txt"), storageKey: string, userId: uuid, createdAt: date 
-6. GenerationJob id: uuid, status: string ("queued", "parsing", "generating", "done", "failed"), questionType: "open-ended" | "multiple-choice", questionCount: number, documentId: uuid, testId: uuid | null, createdAt: date
-7. Attempt id: uuid, testId: uuid, userId: uuid, score: number | null, createdAt: date
-8. Response id: uuid, questionId: uuid, answerOptionId: uuid | null, value: string | null, attemptId: uuid, createdAt: date
-9. Evaluation id: uuid, responseId: uuid, isCorrect: boolean, explanation: string | null, evaluationJobId: uuid, createdAt: date
-10. EvaluationJob id: uuid, attemptId: uuid, status: (queued | evaluating | failed | done) createdAt: date
-11. Quota: id: uuid, type: string ("storage", "generation") limit: (generation: number as count, storage as bytes), used: number, userId: uuid, createdAt: date
+Represents a registered platform user.
+
+* `id: uuid`
+* `email: string`
+* `passwordHash: string`
+* `firstName: string`
+* `lastName: string`
+* `createdAt: date`
+* `updatedAt: date`
+* `deletedAt: date | null`
+
+### Document
+
+Represents a file uploaded by a user and used as source material for test generation.
+
+* `id: uuid`
+* `storageKey: string`
+* `fileName: string`
+* `mimeType: string`
+* `size: number`
+* `userId: uuid`
+* `createdAt: date`
+* `updatedAt: date`
+* `deletedAt: date | null`
+
+### Test
+
+Represents a generated test associated with a source document.
+
+* `id: uuid`
+* `name: string`
+* `userId: uuid`
+* `documentId: uuid`
+* `createdAt: date`
+* `updatedAt: date`
+* `deletedAt: date | null`
+
+### Question
+
+Represents a question within a test.
+
+* `id: uuid`
+* `testId: uuid`
+* `type: "open-ended" | "multiple-choice"`
+* `value: string`
+* `createdAt: date`
+* `updatedAt: date`
+
+### AnswerOption
+
+Represents an available answer option for a multiple-choice question.
+
+* `id: uuid`
+* `questionId: uuid`
+* `value: string`
+* `isCorrect: boolean`
+* `createdAt: date`
+* `updatedAt: date`
+
+### GenerationJob
+
+Represents the asynchronous process of generating a test from a document.
+
+* `id: uuid`
+* `documentId: uuid`
+* `testId: uuid | null`
+* `questionType: "open-ended" | "multiple-choice"`
+* `questionCount: number`
+* `status: "queued" | "parsing" | "generating" | "done" | "failed"`
+* `createdAt: date`
+* `updatedAt: date`
+
+### Attempt
+
+Represents a user's attempt to complete a test.
+
+* `id: uuid`
+* `testId: uuid`
+* `userId: uuid`
+* `score: number | null`
+* `createdAt: date`
+* `updatedAt: date`
+
+### Response
+
+Represents a user's answer to a question within a test attempt.
+
+* `id: uuid`
+* `questionId: uuid`
+* `attemptId: uuid`
+* `answerOptionId: uuid | null`
+* `value: string | null`
+* `createdAt: date`
+* `updatedAt: date`
+
+### EvaluationJob
+
+Represents the asynchronous process of evaluating responses from a test attempt.
+
+* `id: uuid`
+* `attemptId: uuid`
+* `status: "queued" | "evaluating" | "done" | "failed"`
+* `createdAt: date`
+* `updatedAt: date`
+
+### Evaluation
+
+Represents the evaluation result for a submitted response.
+
+* `id: uuid`
+* `responseId: uuid`
+* `evaluationJobId: uuid`
+* `isCorrect: boolean`
+* `explanation: string | null`
+* `createdAt: date`
+* `updatedAt: date`
+
+### Quota
+
+Represents a resource usage limit assigned to a user.
+
+* `id: uuid`
+* `userId: uuid`
+* `type: "storage" | "generation"`
+* `maxLimit: number`
+* `used: number`
+* `createdAt: date`
+* `updatedAt: date`
+
+For `generation` quotas, `maxLimit` and `used` represent generation count. For `storage` quotas, they represent storage usage in bytes.
+
 
 ## Architecture decisions
 ## Trade-offs
