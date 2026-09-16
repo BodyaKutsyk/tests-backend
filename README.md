@@ -182,11 +182,10 @@ POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated appl
 
 ### How to start
 
-1. Create a `.env` file based on `.env.example`.
-
+1. Create a . `.env.infical` file base on `.env.infisical.example`
    For a better understanding of the available environment variables and their validation rules, see `src/config/env.schema.ts`.
 
-2. Generate the required secrets:
+Generate the required secrets:
    ```bash
    sh scripts/init-secrets.sh
    ```
