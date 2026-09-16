@@ -1,0 +1,4 @@
+EXPLAIN (ANALYSE, BUFFERS)
+SELECT *
+FROM documents
+WHERE length(file_name) BETWEEN 5 AND 9;
