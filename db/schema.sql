@@ -70,7 +70,7 @@ CREATE TABLE generation_jobs (
 CREATE TABLE questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     test_id UUID REFERENCES tests(id) NOT NULL,
-    type quota_type NOT NULL,
+    type question_type NOT NULL,
     value TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

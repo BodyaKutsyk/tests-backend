@@ -211,4 +211,8 @@ Run:
 sh rotate.sh
 ```
 The script generates a new database password and applies the required changes.
+### How to optimize database queries
+Run to apply optimization indexes:
+``` bash docker exec -i postgres psql -h ${DB_HOST} -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
+```
 
