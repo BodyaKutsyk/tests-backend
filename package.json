@@ -28,7 +28,8 @@
     "docker:start:dev": "pnpm docker:build && docker compose up --watch",
     "docker:stop:dev": "docker compose down",
     "docker:start:prod": "pnpm docker:build:prod && docker compose -f docker-compose.yaml up -d",
-    "docker:stop:prod": "docker compose -f docker-compose.yaml down"
+    "docker:stop:prod": "docker compose -f docker-compose.yaml down",
+    "migration:generate": "typeorm migration:generate -d data-source.ts migrations/generate-db"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

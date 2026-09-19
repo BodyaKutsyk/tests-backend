@@ -1,0 +1,26 @@
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import { Base } from './base.js';
+import { User } from './user.js';
+import { Test } from './test.js';
+import { Response } from './response.js';
+import { EvaluationJob } from './evaluation-job.js';
+
+@Entity('attempts')
+export class Attempt extends Base {
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @OneToOne(() => Test)
+  @JoinColumn({ name: 'test_id' })
+  test: Test;
+
+  @Column({ type: 'smallint', default: 0 })
+  score: number;
+
+  @OneToMany(() => Response, (response) => response.attempt)
+  response: Response;
+
+  @OneToOne(() => EvaluationJob)
+  evaluationJob: EvaluationJob;
+}

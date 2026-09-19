@@ -16,14 +16,14 @@ services:
           target: /app/tsconfig.json
     ports: !override
       - "${API_INTERNAL_PORT}:${API_INTERNAL_PORT}"
-  db_seed:
-    build:
-      context: .
-      target: dev
-    depends_on:
-      db:
-        condition: service_healthy
-    command: ["pnpm", "exec", "tsx", "db/seed.ts"]
-    env_file:
-      - .env
+#  db_seed:
+#    build:
+#      context: .
+#      target: dev
+#    depends_on:
+#      db:
+#        condition: service_healthy
+#    command: ["pnpm", "exec", "tsx", "db/seed.ts"]
+#    env_file:
+#      - .env
 
