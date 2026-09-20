@@ -4,6 +4,7 @@ export const envSchema = z.object({
   API_INTERNAL_PORT: z.coerce.number().min(0).max(65535),
   API_EXTERNAL_PORT: z.coerce.number().min(0).max(65535),
   POSTGRES_USER: z.string(),
+  POSTGRES_HOST: z.string(),
   POSTGRES_DB: z.string(),
   POSTGRES_USER_PASSWORD: z.string(),
   POSTGRES_ADMIN: z.string(),

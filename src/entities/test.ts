@@ -1,8 +1,17 @@
 import { BaseWithDeleted } from './base.js';
-import { Column, Entity, Index, JoinColumn,  ManyToMany, ManyToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToMany,
+  ManyToOne,
+  OneToOne,
+  type Relation
+} from 'typeorm';
 import { User } from './user.js';
 import { Document } from './document.js'
-
+import { GenerationJob } from './generation-job.js';
 
 @Entity('tests')
 export class Test extends BaseWithDeleted {
@@ -11,10 +20,13 @@ export class Test extends BaseWithDeleted {
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: Relation<User>;
 
   @ManyToMany(() => Document)
-  document: Document;
+  documents: Relation<Document[]>;
+
+  @OneToOne(() => GenerationJob)
+  generationJob: Relation<GenerationJob>
 
   @Index('idx_tests_search_vector', { synchronize: false })
   @Column({ type: 'tsvector', generatedType: 'STORED', asExpression: "to_tsvector('simple', name || '')"})

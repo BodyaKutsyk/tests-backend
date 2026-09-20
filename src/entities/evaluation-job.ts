@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne, type Relation } from 'typeorm';
 import { Base } from './base.js';
 import { Attempt } from './attempt.js';
 
@@ -17,5 +17,5 @@ export class EvaluationJob extends Base {
 
   @OneToOne(() => Attempt)
   @JoinColumn({ name: 'attempt_id' })
-  attempt: Attempt;
+  attempt: Relation<Attempt>;
 }

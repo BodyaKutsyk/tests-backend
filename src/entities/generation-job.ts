@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne, type Relation } from 'typeorm';
 import { Base } from './base.js';
 import { User } from './user.js';
 import { Test } from './test.js';
@@ -31,12 +31,12 @@ export class GenerationJob extends Base {
 
   @OneToOne(() => Test, { nullable: true })
   @JoinColumn({ name: 'test_id' })
-  test: Test;
+  test: Relation<Test>;
 
-  @OneToMany(() => User, (user) => user.generationJob)
+  @OneToMany(() => User, (user) => user.generationJobs)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  users: Relation<User[]>;
 
   @OneToMany(() => Document, (document) => document.generationJob)
-  document: Document;
+  documents: Relation<Document[]>;
 }

@@ -7,6 +7,7 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
+  type Relation,
 } from 'typeorm';
 import { User } from './user.js';
 import { Test } from './test.js';
@@ -28,15 +29,15 @@ export class Document extends BaseWithDeleted {
   @Column({ type: 'bigint' })
   size: string;
 
-  @Index()
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  @Index()
+  user: Relation<User>;
 
   @ManyToMany(() => Test)
   @JoinTable({ name: 'documents_tests' })
-  test: Test;
+  tests: Relation<Test[]>;
 
   @ManyToOne(() => GenerationJob)
-  generationJob: GenerationJob;
+  generationJob: Relation<GenerationJob>;
 }

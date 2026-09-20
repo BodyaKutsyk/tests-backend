@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, type Relation } from 'typeorm';
 import { Base } from './base.js';
 import { AnswerOption } from './answer-option.js';
 import { Question } from './question.js';
@@ -12,16 +12,16 @@ export class Response extends Base {
 
   @OneToMany(() => Question, (question) => question.response)
   @JoinColumn({ name: 'question_id' })
-  questions: Question;
+  questions: Relation<Question[]>;
 
   @OneToMany(() => AnswerOption, (answerOption) => answerOption.response, { nullable: true })
   @JoinColumn({ name: 'answer_option_id' })
-  answerOption: AnswerOption;
+  answerOptions: Relation<AnswerOption[]>;
 
   @ManyToOne(() => Attempt)
   @JoinColumn({ name: 'attempt_id' })
-  attempt: Attempt;
+  attempt: Relation<Attempt>;
 
   @ManyToOne(() => Evaluation, (evaluation) => evaluation.response)
-  evaluation: Evaluation;
+  evaluation: Relation<Evaluation>;
 }

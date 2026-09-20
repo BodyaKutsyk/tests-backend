@@ -1,5 +1,5 @@
 import { Base } from './base.js';
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, type Relation } from 'typeorm';
 import { QuestionType } from './generation-job.js';
 import { Test } from './test.js';
 import { AnswerOption } from './answer-option.js';
@@ -17,10 +17,9 @@ export class Question extends Base {
   @JoinColumn({ name: 'test_id' })
   test: Test;
 
-
-  @ManyToOne(() => AnswerOption, (answerOption => answerOption.question))
-  answer_option: AnswerOption;
+  @ManyToOne(() => AnswerOption, (answerOption => answerOption.questions))
+  answer_option: Relation<AnswerOption>;
 
   @ManyToOne(() => Response, (response) => response.questions)
-  response: Response;
+  response: Relation<Response>;
 }

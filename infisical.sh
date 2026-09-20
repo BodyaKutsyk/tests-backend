@@ -18,4 +18,4 @@ export INFISICAL_TOKEN="$(
 exec infisical run \
   --domain="$INFISICAL_API_URL" \
   --env=dev \
-  -- docker compose "$@"
+  -- "$@"

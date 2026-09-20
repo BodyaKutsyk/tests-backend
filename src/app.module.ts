@@ -26,6 +26,7 @@ import { readFile } from 'node:fs/promises';
           password: async () =>
             (await readFile(DB_PASSWORD_FILE, 'utf-8')).trim(),
           database: configService.get('POSTGRES_DB'),
+          autoLoadEntities: false
         };
       },
     }),

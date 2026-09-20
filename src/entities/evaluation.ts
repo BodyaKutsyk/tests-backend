@@ -1,9 +1,10 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne, type Relation } from 'typeorm';
 import { EvaluationJob } from './evaluation-job.js';
 import { Response } from './response.js'
+import { Base } from './base.js';
 
 @Entity('evaluations')
-export class Evaluation {
+export class Evaluation extends Base {
   @Column({ type: 'text', nullable: true })
   explanation: string;
 
@@ -12,9 +13,9 @@ export class Evaluation {
 
   @OneToOne(() => EvaluationJob)
   @JoinColumn({ name: 'evaluation_job_id' })
-  evaluationJob: EvaluationJob;
+  evaluationJob: Relation<EvaluationJob>;
 
   @OneToMany(() => Response, (response) => response.evaluation)
   @JoinColumn({ name: 'response_id' })
-  response: Response;
+  response: Relation<Response[]>;
 }

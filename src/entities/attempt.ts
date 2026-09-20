@@ -1,4 +1,12 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  type Relation,
+} from 'typeorm';
 import { Base } from './base.js';
 import { User } from './user.js';
 import { Test } from './test.js';
@@ -9,18 +17,18 @@ import { EvaluationJob } from './evaluation-job.js';
 export class Attempt extends Base {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: Relation<User>;
 
   @OneToOne(() => Test)
   @JoinColumn({ name: 'test_id' })
-  test: Test;
+  test: Relation<Test>;
 
   @Column({ type: 'smallint', default: 0 })
   score: number;
 
   @OneToMany(() => Response, (response) => response.attempt)
-  response: Response;
+  responses: Relation<Response[]>;
 
   @OneToOne(() => EvaluationJob)
-  evaluationJob: EvaluationJob;
+  evaluationJob: Relation<EvaluationJob>;
 }
