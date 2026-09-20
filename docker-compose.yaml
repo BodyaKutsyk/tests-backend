@@ -1,13 +1,30 @@
+x-infisical-env: &infisical-env
+  INFISICAL_TOKEN: ${INFISICAL_TOKEN}
+  INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
+  INFISICAL_API_URL: http://host.docker.internal:80
+
+x-infisical-hosts: &infisical-hosts
+  - "host.docker.internal:host-gateway"
+
 services:
   api:
-    container_name: core_api_prod
-    ports:
-      - "${API_EXTERNAL_PORT}:${API_INTERNAL_PORT}"
-    env_file:
-      - .env
+    image: api_image
+
+    container_name: api_prod
+
     build:
       context: .
       target: prod
+
+    environment:
+      <<: *infisical-env
+      INFISICAL_ENV: prod
+
+    extra_hosts: *infisical-hosts
+
+    ports:
+      - "${API_EXTERNAL_PORT}:${API_INTERNAL_PORT}"
+
     depends_on:
       db:
         condition: service_healthy

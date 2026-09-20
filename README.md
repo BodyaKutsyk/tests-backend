@@ -182,13 +182,12 @@ POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated appl
 
 ### How to start
 
-1. Create a `.env` file based on `.env.example`.
-
+1. Create a . `.env.infisical` file base on `.env.infisical.example`
    For a better understanding of the available environment variables and their validation rules, see `src/config/env.schema.ts`.
 
 2. Generate the required secrets:
    ```bash
-   sh scripts/init-secrets.sh
+   bash scripts/init-secrets.sh
    ```
 3. Start the application in the required mode:
    ```bash
@@ -208,7 +207,7 @@ Before rotating the database password, make sure the database container is runni
 
 Run:
 ```bash
-sh rotate.sh
+bash rotate.sh
 ```
 The script generates a new database password and applies the required changes.
 ### How to optimize database queries
