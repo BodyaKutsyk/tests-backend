@@ -3,6 +3,7 @@ node_modules
 dist
 .env*
 !.env.example
+!.env.infisical.example
 tsconfig.build.tsbuildinfo
 test
 secrets

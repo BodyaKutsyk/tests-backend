@@ -1,9 +1,21 @@
+x-infisical-env: &infisical-env
+  INFISICAL_TOKEN: ${INFISICAL_TOKEN}
+  INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
+  INFISICAL_API_URL: http://host.docker.internal:80
+
+x-infisical-hosts: &infisical-hosts
+  - "host.docker.internal:host-gateway"
+
 services:
   api:
+    container_name: api_dev
     build:
       context: .
       target: dev
-    container_name: core_api_dev
+    image: api_dev
+    environment:
+      INFISICAL_ENV: dev
+
     develop:
       watch:
         - action: sync+restart
@@ -17,13 +29,13 @@ services:
     ports: !override
       - "${API_INTERNAL_PORT}:${API_INTERNAL_PORT}"
   db_seed:
-    build:
-      context: .
-      target: dev
+    image: api_dev
     depends_on:
       db:
         condition: service_healthy
-    command: ["pnpm", "exec", "tsx", "db/seed.ts"]
-    env_file:
-      - .env
+    command: ["infisical", "run", "--projectId=${INFISICAL_PROJECT_ID}", "--env=dev", "--", "pnpm", "exec", "tsx", "db/seed.ts"]
+    extra_hosts: *infisical-hosts
+    environment:
+      <<: *infisical-env
+      INFISICAL_ENV: dev
 
