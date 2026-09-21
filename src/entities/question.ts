@@ -7,7 +7,7 @@ import { Response } from './response.js'
 
 @Entity('questions')
 export class Question extends Base {
-  @Column({ enum: QuestionType })
+  @Column({ type: 'enum', enum: QuestionType })
   question_type: QuestionType;
 
   @Column({ type: 'text' })

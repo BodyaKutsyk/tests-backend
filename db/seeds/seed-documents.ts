@@ -37,7 +37,7 @@ export async function seedDocuments(client: Client) {
   );
   const copyStream = client.query(
     copyFrom(
-      `COPY documents (file_name, mime_type, size, storage_key, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
+      `COPY documents (name, mime_type, size, storage_key, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
     ),
   );
   const userIds = rows.map(({ id }) => id)

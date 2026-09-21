@@ -20,10 +20,10 @@ enum JobStatus {
 
 @Entity('generation_jobs')
 export class GenerationJob extends Base {
-  @Column({ enum: QuestionType })
+  @Column({ enum: QuestionType, type: 'enum' })
   question_type: QuestionType;
 
-  @Column({ enum: JobStatus, default: JobStatus.Queued })
+  @Column({ type: 'enum', enum: JobStatus, default: JobStatus.Queued })
   status: JobStatus;
 
   @Column({ type: 'int' })

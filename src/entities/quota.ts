@@ -10,7 +10,7 @@ enum QuotaType {
 
 @Entity('quotas')
 export class Quota extends Base {
-  @Column({ enum: QuotaType })
+  @Column({ type: 'enum', enum: QuotaType })
   quota_type: QuotaType
 
   @Column({ type: 'int' })

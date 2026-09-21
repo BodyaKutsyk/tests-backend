@@ -12,7 +12,7 @@ enum EvaluationJobStatus {
 
 @Entity('evaluation_jobs')
 export class EvaluationJob extends Base {
-  @Column({ enum: EvaluationJobStatus, default: EvaluationJobStatus.Queued })
+  @Column({ type: 'enum', enum: EvaluationJobStatus, default: EvaluationJobStatus.Queued })
   status: EvaluationJobStatus;
 
   @OneToOne(() => Attempt)
