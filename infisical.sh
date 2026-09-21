@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-set -a
-source ./.env.infisical
-set +a
+if [[ -f .env.infisical ]]; then
+  set -a
+  source .env.infisical
+  set +a
+fi
+
+: "${INFISICAL_CLIENT_ID:?INFISICAL_CLIENT_ID is required}"
+: "${INFISICAL_CLIENT_SECRET:?INFISICAL_CLIENT_SECRET is required}"
+: "${INFISICAL_API_URL:?INFISICAL_API_URL is required}"
 
 export INFISICAL_TOKEN="$(
   infisical login \

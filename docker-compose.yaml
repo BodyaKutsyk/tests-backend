@@ -1,6 +1,8 @@
 x-infisical-env: &infisical-env
   INFISICAL_TOKEN: ${INFISICAL_TOKEN}
   INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
+  INFISICAL_CLIENT_ID: ${INFISICAL_CLIENT_ID}
+  INFISICAL_CLIENT_SECRET: ${INFISICAL_CLIENT_SECRET}
   INFISICAL_API_URL: http://host.docker.internal:80
 
 x-infisical-hosts: &infisical-hosts
@@ -18,6 +20,7 @@ services:
 
     environment:
       <<: *infisical-env
+      POSTGRES_HOST: db
       INFISICAL_ENV: prod
 
     extra_hosts: *infisical-hosts
