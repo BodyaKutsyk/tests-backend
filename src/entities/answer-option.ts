@@ -3,6 +3,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   type Relation,
 } from 'typeorm';
 import { Base } from './base.js';
@@ -21,6 +22,6 @@ export class AnswerOption extends Base {
   @JoinColumn({ name: 'question_id' })
   questions: Relation<Question[]>;
 
-  @ManyToOne(() => Response, (response) => response.answerOptions)
+  @OneToMany(() => Response, (response) => response.answerOptions)
   response: Relation<Response>;
 }

@@ -18,8 +18,8 @@ export class Question extends Base {
   test: Test;
 
   @OneToMany(() => AnswerOption, (answerOption => answerOption.questions))
-  answer_option: Relation<AnswerOption>;
+  answer_option: Relation<AnswerOption[]>;
 
-  @ManyToOne(() => Response, (response) => response.questions)
+  @OneToMany(() => Response, (response) => response.questions)
   response: Relation<Response>;
 }

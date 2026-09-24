@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne, type Relation } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+  type Relation,
+} from 'typeorm';
 import { EvaluationJob } from './evaluation-job.js';
 import { Response } from './response.js'
 import { Base } from './base.js';
@@ -11,11 +18,11 @@ export class Evaluation extends Base {
   @Column({ type: 'boolean', default: false })
   is_correct: boolean;
 
-  @OneToOne(() => EvaluationJob, { onDelete: 'CASCADE' })
+  @ManyToOne(() => EvaluationJob, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'evaluation_job_id' })
   evaluationJob: Relation<EvaluationJob>;
 
-  @OneToMany(() => Response, (response) => response.evaluation, { onDelete: 'CASCADE' })
+  @OneToOne(() => Response, (response) => response.evaluation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'response_id' })
-  response: Relation<Response[]>;
+  response: Relation<Response>;
 }

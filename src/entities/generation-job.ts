@@ -1,4 +1,14 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne, type Relation } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  type Relation,
+} from 'typeorm';
 import { Base } from './base.js';
 import { User } from './user.js';
 import { Test } from './test.js';
@@ -7,7 +17,7 @@ import { Document } from './document.js';
 // TODO: place to the domain-owned type
 export enum QuestionType {
   OpenEnded = 'open-ended',
-  MultipleChoice = 'multiple-choice'
+  MultipleChoice = 'multiple-choice',
 }
 
 enum JobStatus {
@@ -33,13 +43,23 @@ export class GenerationJob extends Base {
   @JoinColumn({ name: 'test_id' })
   test: Relation<Test>;
 
-  @OneToMany(() => User, (user) => user.generationJobs, {
+  @ManyToOne(() => User, (user) => user.generationJobs, {
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'user_id' })
   users: Relation<User[]>;
 
-  @OneToMany(() => Document, (document) => document.generationJob)
-  @JoinColumn({ name: 'document_id' })
+  @ManyToMany(() => Document)
+  @JoinTable({
+    name: 'documents_generations_jobs',
+    joinColumn: {
+      name: 'generation_job_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'document_id',
+      referencedColumnName: 'id',
+    },
+  })
   documents: Relation<Document[]>;
 }

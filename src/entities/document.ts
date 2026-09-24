@@ -38,11 +38,11 @@ export class Document extends BaseWithDeleted {
   @JoinTable({
     name: 'test_documents',
     joinColumn: {
-      name: 'test_id',
+      name: 'document_id',
       referencedColumnName: 'id',
     },
     inverseJoinColumn: {
-      name: 'document_id',
+      name: 'test_id',
       referencedColumnName: 'id',
     },
   })

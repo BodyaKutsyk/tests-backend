@@ -1,6 +1,14 @@
-import { Column, Entity, JoinColumn, OneToOne, type Relation } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+  type Relation,
+} from 'typeorm';
 import { Base } from './base.js';
 import { Attempt } from './attempt.js';
+import { Evaluation } from './evaluation.js';
 
 // TODO: place to the domain-owned type
 enum EvaluationJobStatus {
@@ -15,6 +23,9 @@ export class EvaluationJob extends Base {
   @Column({ type: 'enum', enum: EvaluationJobStatus, default: EvaluationJobStatus.Queued })
   status: EvaluationJobStatus;
 
+  @OneToMany(() => Evaluation, (evaluation) => evaluation.evaluationJob)
+  evaluations: Relation<Evaluation[]>
+  
   @OneToOne(() => Attempt, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'attempt_id' })
   attempt: Relation<Attempt>;

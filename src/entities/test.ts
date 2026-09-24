@@ -6,19 +6,21 @@ import {
   JoinColumn,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   OneToOne,
-  type Relation
+  type Relation,
 } from 'typeorm';
 import { User } from './user.js';
 import { Document } from './document.js'
 import { GenerationJob } from './generation-job.js';
+import { Attempt } from './attempt.js';
 
 @Entity('tests')
 export class Test extends BaseWithDeleted {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @ManyToOne(() => User, { onDelete: "RESTRICT" })
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
@@ -26,9 +28,16 @@ export class Test extends BaseWithDeleted {
   documents: Relation<Document[]>;
 
   @OneToOne(() => GenerationJob)
-  generationJob: Relation<GenerationJob>
+  generationJob: Relation<GenerationJob>;
+
+  @OneToMany(() => Attempt, (attempt) => attempt.test)
+  attempts: Relation<Attempt[]>;
 
   @Index('idx_tests_search_vector', { synchronize: false })
-  @Column({ type: 'tsvector', generatedType: 'STORED', asExpression: "to_tsvector('simple', name || '')"})
+  @Column({
+    type: 'tsvector',
+    generatedType: 'STORED',
+    asExpression: "to_tsvector('simple', name || '')",
+  })
   searchVector: string;
 }

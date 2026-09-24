@@ -3,7 +3,6 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   OneToOne,
   type Relation,
 } from 'typeorm';
@@ -18,11 +17,11 @@ export class Response extends Base {
   @Column({ type: 'text', nullable: true })
   value: string;
 
-  @OneToMany(() => Question, (question) => question.response)
+  @ManyToOne(() => Question, (question) => question.response, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'question_id' })
-  questions: Relation<Question[]>;
+  questions: Relation<Question>;
 
-  @OneToOne(() => AnswerOption, (answerOption) => answerOption.response, { nullable: true })
+  @ManyToOne(() => AnswerOption, (answerOption) => answerOption.response, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'answer_option_id' })
   answerOptions: Relation<AnswerOption[]>;
 
@@ -30,6 +29,6 @@ export class Response extends Base {
   @JoinColumn({ name: 'attempt_id' })
   attempt: Relation<Attempt>;
 
-  @ManyToOne(() => Evaluation, (evaluation) => evaluation.response)
+  @OneToOne(() => Evaluation, (evaluation) => evaluation.response)
   evaluation: Relation<Evaluation>;
 }
