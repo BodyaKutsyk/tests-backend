@@ -78,9 +78,9 @@ Represents an available answer option for a multiple-choice question.
 Represents the asynchronous process of generating a test from one or more documents.
 
 * `id: uuid`
-* `documentId: uuid[]`
+* `documentIds: uuid[]`
 * `testId: uuid | null`
-* `userId`: uuid
+* `userId: uuid`
 * `questionType: "open-ended" | "multiple-choice"`
 * `questionCount: number`
 * `status: "queued" | "parsing" | "generating" | "done" | "failed"`
@@ -162,10 +162,10 @@ Before starting the project, install the dependencies:
 If you made some changes in the `openapi/openapi.yaml` update docs HTML file via `pnpm openapi:build`.
 For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Testing
-1. project uses jest library as test runner
+1. Project uses jest library as test runner
 2. API contract testing is done via `pact@4`
-3. to test project  use `pnpm test` or `pnpm test`
-4. to validate existing `openapi.yaml` specification use `pnpm penapi:lint`
+3. To test the project, use `pnpm test`
+4. To validate existing `openapi.yaml` specification use `pnpm openapi:lint`
 
 ---
 
@@ -186,7 +186,7 @@ POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated appl
 
 ### How to start
 
-1. Create an . `.env.infisical` file base on `.env.infisical.example`
+1. Create an `.env.infisical` file base on `.env.infisical.example`
    For a better understanding of the available environment variables and their validation rules, see `src/config/env.schema.ts`.
 
 2. Generate the required secrets:
@@ -217,8 +217,8 @@ bash rotate.sh
 The script generates a new database password and applies the required changes.
 ### How to apply database indexes
 Run to apply optimization indexes:
-``` 
-bash docker exec -i postgres psql -h ${DB_HOST} -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
+``` bash 
+docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
 ```
 
 ## Grading
@@ -233,9 +233,9 @@ where `<command>` is the script you want to execute. In this mode, environment v
 
 ### When to use QueryBuilder and Repository
 
-The project uses Repository for simple CRUD operations because it provides a straightforward and convenient API.
+The project uses `Repository` for simple CRUD operations because it provides a straightforward and convenient API.
 
-QueryBuilder is used for more complex queries involving ORDER BY, GROUP BY, and JOIN clauses, primarily for generating reports.
+`QueryBuilder` is used for more complex queries involving `ORDER BY`, `GROUP BY`, and `JOIN` clauses, primarily for generating reports.
 
 ### Synchronize
 The `synchronize` option in `DataSource` is disabled because the project uses migrations.

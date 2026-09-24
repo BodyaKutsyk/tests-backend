@@ -15,7 +15,7 @@ import { EvaluationJob } from './evaluation-job.js';
 
 @Entity('attempts')
 export class Attempt extends Base {
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
