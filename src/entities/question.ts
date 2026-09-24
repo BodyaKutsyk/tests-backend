@@ -1,5 +1,5 @@
 import { Base } from './base.js';
-import { Entity, Column, ManyToOne, JoinColumn, type Relation } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn, type Relation } from 'typeorm';
 import { QuestionType } from './generation-job.js';
 import { Test } from './test.js';
 import { AnswerOption } from './answer-option.js';
@@ -13,11 +13,11 @@ export class Question extends Base {
   @Column({ type: 'text' })
   value: string;
 
-  @ManyToOne(() => Test)
+  @ManyToOne(() => Test, { onDelete: "CASCADE" })
   @JoinColumn({ name: 'test_id' })
   test: Test;
 
-  @ManyToOne(() => AnswerOption, (answerOption => answerOption.questions))
+  @OneToMany(() => AnswerOption, (answerOption => answerOption.questions))
   answer_option: Relation<AnswerOption>;
 
   @ManyToOne(() => Response, (response) => response.questions)

@@ -29,13 +29,23 @@ export class Document extends BaseWithDeleted {
   @Column({ type: 'bigint' })
   size: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   @Index()
   user: Relation<User>;
 
-  @ManyToMany(() => Test)
-  @JoinTable({ name: 'documents_tests' })
+  @ManyToMany(() => Test, { onDelete: 'CASCADE' })
+  @JoinTable({
+    name: 'test_documents',
+    joinColumn: {
+      name: 'test_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'document_id',
+      referencedColumnName: 'id',
+    },
+  })
   tests: Relation<Test[]>;
 
   @ManyToOne(() => GenerationJob)

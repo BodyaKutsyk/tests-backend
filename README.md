@@ -201,6 +201,7 @@ POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated appl
    ```bash
    pnpm check:env
    ```
+
 ### How to rotate the database password
 
 Before rotating the database password, make sure the database container is running and healthy.
@@ -215,3 +216,27 @@ Run to apply optimization indexes:
 ``` bash docker exec -i postgres psql -h ${DB_HOST} -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
 ```
 
+## Grading
+### How to run the app without Infisical infrastructure
+
+To start the application without using Infisical, run:
+
+```bash
+SKIP_VAULT=1 pnpm infisical <command>
+```
+where `<command>` is the script you want to execute. In this mode, environment variables are loaded from the local `.env` file instead of being injected by Infisical.
+
+### When to use QueryBuilder and Repository
+
+The project uses Repository for simple CRUD operations because it provides a straightforward and convenient API.
+
+QueryBuilder is used for more complex queries involving ORDER BY, GROUP BY, and JOIN clauses, primarily for generating reports.
+
+### Synchronize
+The synchronize option in DataSource is disabled because project uses migrations
+
+### `onDelete` in Entities
+
+The application uses `RESTRICT` for relations referencing the `User` entity to prevent accidental deletion while dependent records still exist.
+
+`CASCADE` is used for most child entities that have no meaningful value once their parent entity is deleted.

@@ -15,7 +15,7 @@ export class EvaluationJob extends Base {
   @Column({ type: 'enum', enum: EvaluationJobStatus, default: EvaluationJobStatus.Queued })
   status: EvaluationJobStatus;
 
-  @OneToOne(() => Attempt)
+  @OneToOne(() => Attempt, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'attempt_id' })
   attempt: Relation<Attempt>;
 }

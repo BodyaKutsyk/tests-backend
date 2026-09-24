@@ -10,7 +10,7 @@ async function report() {
     .addSelect('COUNT(test.id)', 'user_total_relations')
     .leftJoin('user.tests', 'test')
     .where('test.user_id IS NOT NULL')
-    .groupBy('user.id, test.id')
+    .groupBy('user.id')
     .orderBy('count(test.id)', 'DESC')
     .limit(10)
     .getRawMany();

@@ -3,7 +3,6 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   type Relation,
 } from 'typeorm';
 import { Base } from './base.js';
@@ -18,7 +17,7 @@ export class AnswerOption extends Base {
   @Column({ type: 'boolean', default: false })
   is_correct: boolean;
 
-  @OneToMany(() => Question, (question) => question.answer_option)
+  @ManyToOne(() => Question, (question) => question.answer_option, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'question_id' })
   questions: Relation<Question[]>;
 

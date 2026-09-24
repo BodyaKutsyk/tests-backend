@@ -29,14 +29,17 @@ export class GenerationJob extends Base {
   @Column({ type: 'int' })
   question_count: number;
 
-  @OneToOne(() => Test, { nullable: true })
+  @OneToOne(() => Test, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'test_id' })
   test: Relation<Test>;
 
-  @OneToMany(() => User, (user) => user.generationJobs)
+  @OneToMany(() => User, (user) => user.generationJobs, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'user_id' })
   users: Relation<User[]>;
 
   @OneToMany(() => Document, (document) => document.generationJob)
+  @JoinColumn({ name: 'document_id' })
   documents: Relation<Document[]>;
 }

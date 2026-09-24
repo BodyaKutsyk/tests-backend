@@ -19,7 +19,7 @@ export class Attempt extends Base {
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
-  @OneToOne(() => Test)
+  @OneToOne(() => Test, { onDelete: "CASCADE" })
   @JoinColumn({ name: 'test_id' })
   test: Relation<Test>;
 

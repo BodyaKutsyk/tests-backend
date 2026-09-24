@@ -11,11 +11,11 @@ export class Evaluation extends Base {
   @Column({ type: 'boolean', default: false })
   is_correct: boolean;
 
-  @OneToOne(() => EvaluationJob)
+  @OneToOne(() => EvaluationJob, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'evaluation_job_id' })
   evaluationJob: Relation<EvaluationJob>;
 
-  @OneToMany(() => Response, (response) => response.evaluation)
+  @OneToMany(() => Response, (response) => response.evaluation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'response_id' })
   response: Relation<Response[]>;
 }

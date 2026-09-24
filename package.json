@@ -34,7 +34,6 @@
     "migration:run": "typeorm migration:run -d dist/data-source.js",
     "migration:show": "typeorm migration:show -d dist/data-source.js",
     "migration:revert": "typeorm migration:revert -d dist/data-source.js",
-    "migrate": "pnpm migration:generate && pnpm migration:run",
     "seed": "pnpm exec tsx db/seed.ts",
     "demo:nplus1": "pnpm exec tsx src/demo-nplus1.ts",
     "report": "pnpm exec tsx src/report.ts"

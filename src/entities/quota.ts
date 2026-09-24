@@ -19,7 +19,7 @@ export class Quota extends Base {
   @Column({ type: 'int', default: 0 })
   used: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: "RESTRICT" } )
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 }
