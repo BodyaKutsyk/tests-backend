@@ -19,7 +19,7 @@ export class Attempt extends Base {
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
-  @ManyToOne(() => Test, { onDelete: "CASCADE" })
+  @ManyToOne(() => Test, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'test_id' })
   test: Relation<Test>;
 
@@ -29,6 +29,6 @@ export class Attempt extends Base {
   @OneToMany(() => Response, (response) => response.attempt)
   responses: Relation<Response[]>;
 
-  @OneToOne(() => EvaluationJob)
+  @OneToOne(() => EvaluationJob, (evaluationJob) => evaluationJob.attempt)
   evaluationJob: Relation<EvaluationJob>;
 }

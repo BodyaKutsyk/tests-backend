@@ -15,15 +15,20 @@ import { Evaluation } from './evaluation.js';
 @Entity('responses')
 export class Response extends Base {
   @Column({ type: 'text', nullable: true })
-  value: string;
+  value: string | null;
 
-  @ManyToOne(() => Question, (question) => question.response, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Question, (question) => question.responses, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'question_id' })
-  questions: Relation<Question>;
+  question: Relation<Question>;
 
-  @ManyToOne(() => AnswerOption, (answerOption) => answerOption.response, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => AnswerOption, (answerOption) => answerOption.responses, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'answer_option_id' })
-  answerOptions: Relation<AnswerOption[]>;
+  answerOption: Relation<AnswerOption | null>;
 
   @ManyToOne(() => Attempt, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'attempt_id' })

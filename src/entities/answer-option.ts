@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Base } from './base.js';
 import { Question } from './question.js';
-import { Response } from './response.js'
+import { Response } from './response.js';
 
 @Entity('answer_options')
 export class AnswerOption extends Base {
@@ -18,10 +18,12 @@ export class AnswerOption extends Base {
   @Column({ type: 'boolean', default: false })
   is_correct: boolean;
 
-  @ManyToOne(() => Question, (question) => question.answer_option, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Question, (question) => question.answerOptions, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'question_id' })
-  questions: Relation<Question[]>;
+  question: Relation<Question>;
 
-  @OneToMany(() => Response, (response) => response.answerOptions)
-  response: Relation<Response>;
+  @OneToMany(() => Response, (response) => response.answerOption)
+  responses: Relation<Response[]>;
 }

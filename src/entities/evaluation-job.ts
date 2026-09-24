@@ -20,13 +20,19 @@ enum EvaluationJobStatus {
 
 @Entity('evaluation_jobs')
 export class EvaluationJob extends Base {
-  @Column({ type: 'enum', enum: EvaluationJobStatus, default: EvaluationJobStatus.Queued })
+  @Column({
+    type: 'enum',
+    enum: EvaluationJobStatus,
+    default: EvaluationJobStatus.Queued,
+  })
   status: EvaluationJobStatus;
 
   @OneToMany(() => Evaluation, (evaluation) => evaluation.evaluationJob)
-  evaluations: Relation<Evaluation[]>
-  
-  @OneToOne(() => Attempt, { onDelete: 'CASCADE' })
+  evaluations: Relation<Evaluation[]>;
+
+  @OneToOne(() => Attempt, (attempt) => attempt.evaluationJob, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'attempt_id' })
   attempt: Relation<Attempt>;
 }

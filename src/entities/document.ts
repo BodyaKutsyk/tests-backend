@@ -34,7 +34,7 @@ export class Document extends BaseWithDeleted {
   @Index()
   user: Relation<User>;
 
-  @ManyToMany(() => Test, { onDelete: 'CASCADE' })
+  @ManyToMany(() => Test, (test) => test.documents, { onDelete: 'CASCADE' })
   @JoinTable({
     name: 'test_documents',
     joinColumn: {
@@ -48,6 +48,6 @@ export class Document extends BaseWithDeleted {
   })
   tests: Relation<Test[]>;
 
-  @ManyToOne(() => GenerationJob)
-  generationJob: Relation<GenerationJob>;
+  @ManyToMany(() => GenerationJob, (generationJob) => generationJob.documents)
+  generationJobs: Relation<GenerationJob[]>;
 }

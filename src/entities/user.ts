@@ -30,7 +30,7 @@ export class User extends BaseWithDeleted {
   @OneToMany(() => Document, (document) => document.user)
   documents: Relation<Document[]>;
 
-  @OneToMany(() => GenerationJob, (generationJob) => generationJob.users)
+  @OneToMany(() => GenerationJob, (generationJob) => generationJob.user)
   generationJobs: Relation<GenerationJob[]>;
 
   @OneToMany(() => Quota, (quota) => quota.user)

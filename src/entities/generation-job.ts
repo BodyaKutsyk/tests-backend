@@ -39,19 +39,22 @@ export class GenerationJob extends Base {
   @Column({ type: 'int' })
   question_count: number;
 
-  @OneToOne(() => Test, { nullable: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Test, (test) => test.generationJob, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'test_id' })
-  test: Relation<Test>;
+  test: Relation<Test | null>;
 
   @ManyToOne(() => User, (user) => user.generationJobs, {
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'user_id' })
-  users: Relation<User[]>;
+  user: Relation<User>;
 
-  @ManyToMany(() => Document)
+  @ManyToMany(() => Document, (document) => document.generationJobs)
   @JoinTable({
-    name: 'documents_generations_jobs',
+    name: 'generation_job_documents',
     joinColumn: {
       name: 'generation_job_id',
       referencedColumnName: 'id',

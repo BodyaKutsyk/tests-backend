@@ -11,7 +11,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { User } from './user.js';
-import { Document } from './document.js'
+import { Document } from './document.js';
 import { GenerationJob } from './generation-job.js';
 import { Attempt } from './attempt.js';
 
@@ -24,10 +24,10 @@ export class Test extends BaseWithDeleted {
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
-  @ManyToMany(() => Document)
+  @ManyToMany(() => Document, (document) => document.tests)
   documents: Relation<Document[]>;
 
-  @OneToOne(() => GenerationJob)
+  @OneToOne(() => GenerationJob, (generationJob) => generationJob.test)
   generationJob: Relation<GenerationJob>;
 
   @OneToMany(() => Attempt, (attempt) => attempt.test)
