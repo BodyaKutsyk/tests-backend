@@ -20,7 +20,7 @@ export class Test extends BaseWithDeleted {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 

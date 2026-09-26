@@ -19,6 +19,7 @@ export class Response extends Base {
 
   @ManyToOne(() => Question, (question) => question.responses, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   @JoinColumn({ name: 'question_id' })
   question: Relation<Question>;
@@ -30,7 +31,7 @@ export class Response extends Base {
   @JoinColumn({ name: 'answer_option_id' })
   answerOption: Relation<AnswerOption | null>;
 
-  @ManyToOne(() => Attempt, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Attempt, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'attempt_id' })
   attempt: Relation<Attempt>;
 

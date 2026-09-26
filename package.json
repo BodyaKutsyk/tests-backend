@@ -47,6 +47,7 @@
     "@nestjs/typeorm": "^12.0.1",
     "@types/pg": "^8.23.1",
     "@types/pg-copy-streams": "^1.2.5",
+    "class-validator": "^0.15.1",
     "pg": "^8.23.0",
     "pg-copy-streams": "^7.0.0",
     "reflect-metadata": "^0.2.2",

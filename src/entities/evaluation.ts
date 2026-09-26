@@ -18,12 +18,13 @@ export class Evaluation extends Base {
   @Column({ type: 'boolean', default: false })
   is_correct: boolean;
 
-  @ManyToOne(() => EvaluationJob, { onDelete: 'CASCADE' })
+  @ManyToOne(() => EvaluationJob, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'evaluation_job_id' })
   evaluationJob: Relation<EvaluationJob>;
 
   @OneToOne(() => Response, (response) => response.evaluation, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   @JoinColumn({ name: 'response_id' })
   response: Relation<Response>;

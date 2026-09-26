@@ -48,6 +48,7 @@ export class GenerationJob extends Base {
 
   @ManyToOne(() => User, (user) => user.generationJobs, {
     onDelete: 'RESTRICT',
+    nullable: false,
   })
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;

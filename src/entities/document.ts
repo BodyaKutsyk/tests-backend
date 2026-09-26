@@ -29,7 +29,7 @@ export class Document extends BaseWithDeleted {
   @Column({ type: 'bigint' })
   size: string;
 
-  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })
   @Index()
   user: Relation<User>;

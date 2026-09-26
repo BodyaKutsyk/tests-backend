@@ -32,6 +32,7 @@ export class EvaluationJob extends Base {
 
   @OneToOne(() => Attempt, (attempt) => attempt.evaluationJob, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   @JoinColumn({ name: 'attempt_id' })
   attempt: Relation<Attempt>;

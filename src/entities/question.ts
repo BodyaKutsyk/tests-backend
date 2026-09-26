@@ -20,7 +20,7 @@ export class Question extends Base {
   @Column({ type: 'text' })
   value: string;
 
-  @ManyToOne(() => Test, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Test, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'test_id' })
   test: Test;
 

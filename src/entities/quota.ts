@@ -11,7 +11,7 @@ enum QuotaType {
 @Entity('quotas')
 export class Quota extends Base {
   @Column({ type: 'enum', enum: QuotaType })
-  quota_type: QuotaType
+  quota_type: QuotaType;
 
   @Column({ type: 'int' })
   max_limit: number;
@@ -19,8 +19,7 @@ export class Quota extends Base {
   @Column({ type: 'int', default: 0 })
   used: number;
 
-  @ManyToOne(() => User, { onDelete: "RESTRICT" } )
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 }
-
