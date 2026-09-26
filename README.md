@@ -31,7 +31,7 @@ Represents a file uploaded by a user and used as source material for test genera
 
 * `id: uuid`
 * `storageKey: string`
-* `fileName: string`
+* `name: string`
 * `mimeType: string`
 * `size: number`
 * `userId: uuid`
@@ -41,12 +41,12 @@ Represents a file uploaded by a user and used as source material for test genera
 
 ### Test
 
-Represents a generated test associated with a source document.
+Represents a generated test based on one or more source documents.
 
 * `id: uuid`
 * `name: string`
 * `userId: uuid`
-* `documentId: uuid`
+* `documentIds: uuid[]`
 * `createdAt: date`
 * `updatedAt: date`
 * `deletedAt: date | null`
@@ -75,11 +75,12 @@ Represents an available answer option for a multiple-choice question.
 
 ### GenerationJob
 
-Represents the asynchronous process of generating a test from a document.
+Represents the asynchronous process of generating a test from one or more documents.
 
 * `id: uuid`
-* `documentId: uuid`
+* `documentIds: uuid[]`
 * `testId: uuid | null`
+* `userId: uuid`
 * `questionType: "open-ended" | "multiple-choice"`
 * `questionCount: number`
 * `status: "queued" | "parsing" | "generating" | "done" | "failed"`
@@ -93,7 +94,7 @@ Represents a user's attempt to complete a test.
 * `id: uuid`
 * `testId: uuid`
 * `userId: uuid`
-* `score: number | null`
+* `score: number`
 * `createdAt: date`
 * `updatedAt: date`
 
@@ -153,15 +154,18 @@ For `generation` quotas, `maxLimit` and `used` represent generation count. For `
 
 
 ## Installation
-Before starting project you need to install npm packages via `npm i`
+Before starting the project, install the dependencies:
+
+`pnpm install`
+
 ### OPENAPI
-If you made some changes in the `openaopi/openapi.yaml` update docs HTML file via `npm run openapi:build`.
-For validating `openapi.yml` use `npm run openapi:lint` based on `redocly/cli`
+If you made some changes in the `openapi/openapi.yaml` update docs HTML file via `pnpm openapi:build`.
+For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Testing
-1. project uses jest library as test runner
+1. Project uses jest library as test runner
 2. API contract testing is done via `pact@4`
-3. to test project  use `npm test` or `npm run test`
-4. to validate existing `openapi.yaml` specification use `npm run openapi:lint`
+3. To test the project, use `pnpm test`
+4. To validate existing `openapi.yaml` specification use `pnpm openapi:lint`
 
 ---
 
@@ -182,7 +186,7 @@ POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated appl
 
 ### How to start
 
-1. Create a . `.env.infisical` file base on `.env.infisical.example`
+1. Create an `.env.infisical` file base on `.env.infisical.example`
    For a better understanding of the available environment variables and their validation rules, see `src/config/env.schema.ts`.
 
 2. Generate the required secrets:
@@ -201,6 +205,7 @@ POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated appl
    ```bash
    pnpm check:env
    ```
+
 ### How to rotate the database password
 
 Before rotating the database password, make sure the database container is running and healthy.
@@ -210,8 +215,35 @@ Run:
 bash rotate.sh
 ```
 The script generates a new database password and applies the required changes.
-### How to optimize database queries
+### How to apply database indexes
 Run to apply optimization indexes:
-``` bash docker exec -i postgres psql -h ${DB_HOST} -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
+``` bash 
+docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
 ```
 
+## Grading
+### How to run the app without Infisical infrastructure
+
+To start the application without using Infisical, run:
+
+```bash
+SKIP_VAULT=1 pnpm infisical <command>
+```
+where `<command>` is the script you want to execute. In this mode, environment variables are loaded from the local `.env` file instead of being injected by Infisical.
+
+### When to use QueryBuilder and Repository
+
+The project uses `Repository` for simple CRUD operations because it provides a straightforward and convenient API.
+
+`QueryBuilder` is used for more complex queries involving `ORDER BY`, `GROUP BY`, and `JOIN` clauses, primarily for generating reports.
+
+### Synchronize
+The `synchronize` option in `DataSource` is disabled because the project uses migrations.
+
+### `onDelete` in Entities
+
+The application uses `RESTRICT` for relations referencing the `User` entity to prevent accidental hard deletion while dependent records still exist.
+
+`CASCADE` is used for child entities that have no meaningful value after their parent entity is deleted.
+
+`SET NULL` is used for optional relations where the child entity should remain after the referenced entity is deleted.
