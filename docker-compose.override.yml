@@ -41,7 +41,7 @@ services:
       db:
         condition: service_healthy
     command: >
-      sh -c "pnpm infisical pnpm migration:run && pnpm infisical pnpm seed"
+      sh -c "pnpm infisical pnpm migrate && pnpm infisical pnpm seed"
     extra_hosts: *infisical-hosts
     environment:
       <<: *infisical-env

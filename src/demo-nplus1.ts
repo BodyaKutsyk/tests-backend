@@ -3,7 +3,6 @@ import { Test } from './entities/test.js';
 import { DataSource, Repository, Logger, QueryRunner } from 'typeorm';
 import { User } from './entities/user.js';
 
-
 class QueryLogger implements Logger {
   private count = 0;
   logQuery(query: string, parameters?: any[], queryRunner?: QueryRunner) {
@@ -39,11 +38,14 @@ class QueryLogger implements Logger {
 }
 
 type RawTest = {
-  id: string,
-  user_id: string
-}
+  id: string;
+  user_id: string;
+};
 
-async function logNPlus1(testRepo: Repository<Test>, userRepo: Repository<User>) {
+async function logNPlus1(
+  testRepo: Repository<Test>,
+  userRepo: Repository<User>,
+) {
   const tests: RawTest[] = await testRepo.query(`
   SELECT *
   FROM tests
@@ -51,28 +53,26 @@ async function logNPlus1(testRepo: Repository<Test>, userRepo: Repository<User>)
   LIMIT 50
 `);
 
-
   for (const test of tests) {
-    const user = await userRepo.findOneBy({ id: test.user_id })
+    await userRepo.findOneBy({ id: test.user_id });
   }
 }
 
 async function logNPlus1Fix(userRepo: Repository<User>) {
   await userRepo
     .createQueryBuilder('user')
-    .innerJoin('user.tests', 'test')
-    .distinct(true)
+    .leftJoinAndSelect('user.tests', 'test')
     .limit(50)
     .getMany();
 }
 
-async function main () {
+async function main() {
   const logger = new QueryLogger();
   const loggingDataSource = new DataSource({
     ...dataSourceOptions,
     logging: true,
-    logger: logger
-  })
+    logger: logger,
+  });
   await loggingDataSource.initialize();
 
   try {
@@ -82,24 +82,23 @@ async function main () {
     let nPlus1QueryFixCount = 0;
     logger.resetCount();
 
-    console.log("\nN+1 request\n")
+    console.log('\nN+1 request\n');
     await logNPlus1(testRepository, userRepo);
     nPlus1QueryCount = logger.getCount();
-    logger.resetCount()
+    logger.resetCount();
 
-    console.log("\nN+1 request fix\n")
+    console.log('\nN+1 request fix\n');
     await logNPlus1Fix(userRepo);
     nPlus1QueryFixCount = logger.getCount();
 
     console.log(
       `\n\nSelecting 50 users that have tests.\nBefore fix: ${nPlus1QueryCount} queries\nAfter fix: ${nPlus1QueryFixCount} query`,
     );
-    console.log()
-    process.exit()
+    console.log();
+    process.exit();
   } catch (e) {
-    console.error(e)
+    console.error(e);
   }
 }
 
-await main()
-
+await main();
