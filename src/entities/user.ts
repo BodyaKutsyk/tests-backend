@@ -33,6 +33,6 @@ export class User extends BaseWithDeleted {
   @OneToMany(() => GenerationJob, (generationJob) => generationJob.user)
   generationJobs: Relation<GenerationJob[]>;
 
-  @OneToMany(() => Quota, (quota) => quota.user)
+  @OneToMany(() => Quota, (quota) => quota.user, { cascade: ['insert'] })
   quotas: Relation<Quota[]>;
 }

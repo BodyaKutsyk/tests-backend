@@ -14,7 +14,11 @@ import { Response } from './response.js';
 
 @Entity('questions')
 export class Question extends Base {
-  @Column({ type: 'enum', enum: QuestionType })
+  @Column({
+    type: 'enum',
+    enum: QuestionType,
+    default: QuestionType.MultipleChoice,
+  })
   question_type: QuestionType;
 
   @Column({ type: 'text' })
@@ -24,7 +28,9 @@ export class Question extends Base {
   @JoinColumn({ name: 'test_id' })
   test: Test;
 
-  @OneToMany(() => AnswerOption, (answerOption) => answerOption.question)
+  @OneToMany(() => AnswerOption, (answerOption) => answerOption.question, {
+    cascade: ['insert'],
+  })
   answerOptions: Relation<AnswerOption[]>;
 
   @OneToMany(() => Response, (response) => response.question)
