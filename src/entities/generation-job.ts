@@ -5,7 +5,6 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
-  OneToMany,
   OneToOne,
   type Relation,
 } from 'typeorm';
@@ -13,14 +12,9 @@ import { Base } from './base.js';
 import { User } from './user.js';
 import { Test } from './test.js';
 import { Document } from './document.js';
+import { QuestionType } from '../types/temporary.js';
 
-// TODO: place to the domain-owned type
-export enum QuestionType {
-  OpenEnded = 'open-ended',
-  MultipleChoice = 'multiple-choice',
-}
-
-enum JobStatus {
+export enum JobStatus {
   Queued = 'queued',
   Parsing = 'parsing',
   Generating = 'generating',

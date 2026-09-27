@@ -7,7 +7,7 @@ import {
   JoinColumn,
   type Relation,
 } from 'typeorm';
-import { QuestionType } from './generation-job.js';
+import { QuestionType } from '../types/temporary.js';
 import { Test } from './test.js';
 import { AnswerOption } from './answer-option.js';
 import { Response } from './response.js';
