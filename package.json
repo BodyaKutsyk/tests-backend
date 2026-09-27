@@ -36,6 +36,7 @@
     "migrate:revert": "typeorm migration:revert -d dist/data-source.js",
     "seed": "pnpm exec tsx db/seed.ts",
     "demo:nplus1": "pnpm exec tsx src/demo-nplus1.ts",
+    "demo:race": "pnpm exec tsx src/race-transaction.ts",
     "report": "pnpm exec tsx src/report.ts"
   },
   "dependencies": {

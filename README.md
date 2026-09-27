@@ -247,3 +247,8 @@ The application uses `RESTRICT` for relations referencing the `User` entity to p
 `CASCADE` is used for child entities that have no meaningful value after their parent entity is deleted.
 
 `SET NULL` is used for optional relations where the child entity should remain after the referenced entity is deleted.
+
+// можливі транзакції: 
+1. створення тесту (test) -> питання -> відповіді
+2. проходження тесту (attempt) -> response
+3. створення фідбеку по тесту (responses) -> evaluationJob -> evaluations 
