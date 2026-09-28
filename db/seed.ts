@@ -2,10 +2,9 @@ import {Client} from 'pg'
 import { seedUsers } from './seeds/seed-users.js';
 import { seedDocuments } from './seeds/seed-documents.js';
 import { seedTests } from './seeds/seed-tests.js';
-import * as process from 'node:process';
 
 const client = new Client({
-  host: 'db',
+  host: process.env.POSTGRES_HOST || 'localhost',
   database: process.env.POSTGRES_DB,
   user: process.env.POSTGRES_ADMIN,
   password: process.env.POSTGRES_ADMIN_PASSWORD,
@@ -17,8 +16,9 @@ async function seed() {
   const isSeeded = result.rows[0].exists;
 
   if (isSeeded) {
-    process.exit(2)
-  };
+    console.log('The database has already been seeded')
+    process.exit()
+  }
 
   try {
    await seedUsers(client);
@@ -26,6 +26,7 @@ async function seed() {
    await seedTests(client);
   } finally {
     await client.end();
+    console.log('Successfully seeded the database')
   }
 }
 

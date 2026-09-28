@@ -16,6 +16,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-l
 FROM base AS dev-deps
 RUN pnpm i
 COPY .  .
+RUN pnpm build
 
 FROM base AS build
 COPY tsconfig.json tsconfig.build.json ./

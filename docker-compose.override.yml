@@ -1,6 +1,8 @@
 x-infisical-env: &infisical-env
   INFISICAL_TOKEN: ${INFISICAL_TOKEN}
   INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
+  INFISICAL_CLIENT_ID: ${INFISICAL_CLIENT_ID}
+  INFISICAL_CLIENT_SECRET: ${INFISICAL_CLIENT_SECRET}
   INFISICAL_API_URL: http://host.docker.internal:80
 
 x-infisical-hosts: &infisical-hosts
@@ -15,6 +17,10 @@ services:
     image: api_dev
     environment:
       INFISICAL_ENV: dev
+    depends_on:
+      db_seed:
+        condition: service_completed_successfully
+        required: false
 
     develop:
       watch:
@@ -30,12 +36,15 @@ services:
       - "${API_INTERNAL_PORT}:${API_INTERNAL_PORT}"
   db_seed:
     image: api_dev
+    container_name: db_seed
     depends_on:
       db:
         condition: service_healthy
-    command: ["infisical", "run", "--projectId=${INFISICAL_PROJECT_ID}", "--env=dev", "--", "pnpm", "exec", "tsx", "db/seed.ts"]
+    command: >
+      sh -c "pnpm infisical pnpm migrate && pnpm infisical pnpm seed"
     extra_hosts: *infisical-hosts
     environment:
       <<: *infisical-env
       INFISICAL_ENV: dev
+      POSTGRES_HOST: db
 
