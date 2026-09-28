@@ -117,10 +117,6 @@ async function raceTransaction() {
     console.log(
       `Attempts: ${totalAttempts}\nFinal used: ${used}\nMax limit: ${maxStorage}`,
     );
-
-    // process.exit(
-    //   Number(!(expectedSuccessful === successful && used <= maxStorage)),
-    // );
   } catch (e) {
     console.log(e);
   }

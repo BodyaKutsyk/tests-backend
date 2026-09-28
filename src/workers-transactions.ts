@@ -5,8 +5,8 @@ import { GenerationJob, JobStatus } from './entities/generation-job.js';
 import { User } from './entities/user.js';
 import { asyncTimeout } from './utils/async-timeout.js';
 import { QuestionType } from './types/temporary.js';
+import { WorkersManager } from './utils/workers-manager.js';
 
-const WORKERS_AMOUNT = 3;
 const JOBS_AMOUNT = 100;
 
 async function createTestJobs(dataSource: DataSource, user: User) {
@@ -25,27 +25,6 @@ async function createTestJobs(dataSource: DataSource, user: User) {
   return await generationJobsRepo.save(
     generationJobsRepo.create(generationJobsMock),
   );
-}
-
-async function runWorker(
-  dataSource: DataSource,
-  userId: string,
-  workerId: number,
-) {
-  let total = 0;
-
-  while (true) {
-    const result = await processQueuedJob(dataSource, userId);
-
-    if (result) {
-      total++;
-    } else {
-      break;
-    }
-  }
-
-  console.log(`[worker #${workerId}] total: ${total}`);
-  return total;
 }
 
 async function processQueuedJob(dataSource: DataSource, userId: string) {
@@ -80,7 +59,7 @@ async function processQueuedJob(dataSource: DataSource, userId: string) {
     return updatedJob.raw.length > 0;
   } catch (e) {
     await queryRunner.rollbackTransaction();
-    console.log(e);
+    return false;
   } finally {
     await queryRunner.release();
   }
@@ -92,6 +71,7 @@ async function transactionWithWorkers() {
     ...dataSourceOptions,
     logger,
   });
+  const workersManager = new WorkersManager(3);
   await dataSource.initialize();
   const user = await dataSource
     .createQueryBuilder(User, 'user')
@@ -100,12 +80,14 @@ async function transactionWithWorkers() {
 
   await createTestJobs(dataSource, user);
   const startTime = new Date().getTime();
-  const jobs = Array.from({ length: WORKERS_AMOUNT }, (_, workerId) =>
-    runWorker(dataSource, user.id, workerId + 1),
+  const results = await workersManager.run(() =>
+    processQueuedJob(dataSource, user.id),
   );
-  const results = await Promise.all(jobs);
+  const totalOperations = results.reduce(
+    (prev, curr) => (prev += curr.count),
+    0,
+  );
   const executionTime = (new Date().getTime() - startTime) / 1000;
-  const totalOperations = results.reduce((prev, curr) => prev + curr, 0);
   console.log(
     `[${executionTime} s] Workers did total: ${totalOperations} operations`,
   );
