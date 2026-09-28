@@ -252,3 +252,9 @@ The application uses `RESTRICT` for relations referencing the `User` entity to p
 1. створення тесту (test) -> питання -> відповіді
 2. проходження тесту (attempt) -> response
 3. створення фідбеку по тесту (responses) -> evaluationJob -> evaluations 
+
+### Concurrency
+
+Atomic UPDATE was chosen to improve query performance and avoid unnecessary explicit row locking.
+The retry mechanism handles two PostgreSQL error codes: `40001` and `40P01`. 
+In both cases, PostgreSQL aborts the affected transaction, so the operation must be retried in a new transaction.
