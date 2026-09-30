@@ -19,6 +19,7 @@ services:
       target: prod
 
     environment:
+      API_INTERNAL_PORT: ${API_INTERNAL_PORT}
       <<: *infisical-env
       POSTGRES_HOST: db
       INFISICAL_ENV: prod
@@ -55,7 +56,47 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./src/db/init.sh:/docker-entrypoint-initdb.d/init.sh
-#      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  pg_bouncer:
+    image: edoburu/pgbouncer:v1.26.0-p0
+    container_name: pg_bouncer
+    ports:
+      - "5433:5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./infrastructure/pgbouncer/pgbouncer.template.ini:/etc/pgbouncer/pgbouncer.template.ini:ro
+    environment:
+      POSTGRES_ADMIN: ${POSTGRES_ADMIN}
+      POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_USER_PASSWORD}
+      AUTH_TYPE: scram-sha-256
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        sed \
+          -e "s|[$]{POSTGRES_DB}|$${POSTGRES_DB}|g" \
+          -e "s|[$]{POSTGRES_ADMIN}|$${POSTGRES_ADMIN}|g" \
+          /etc/pgbouncer/pgbouncer.template.ini \
+          > /etc/pgbouncer/pgbouncer.ini
+    
+        printf '"%s" "%s"\n' \
+          "$${POSTGRES_ADMIN}" \
+          "$${POSTGRES_ADMIN_PASSWORD}" \
+          > /etc/pgbouncer/userlist.txt
+    
+        chmod 600 /etc/pgbouncer/userlist.txt
+    
+        exec /entrypoint.sh /usr/bin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$DB_USER -d $$POSTGRES_DB" ]
+      interval: 2s
+      timeout: 3s
+      retries: 10
 
 secrets:
   db_password:
