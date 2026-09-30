@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
+  Check,
   type Relation,
 } from 'typeorm';
 import { Base } from './base.js';
@@ -15,12 +16,13 @@ import { EvaluationJob } from './evaluation-job.js';
 import { Max, Min } from 'class-validator';
 
 @Entity('attempts')
+@Check('CHK_attempts_score', '"score" BETWEEN 0 AND 100')
 export class Attempt extends Base {
-  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
-  @ManyToOne(() => Test, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Test, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'test_id' })
   test: Relation<Test>;
 

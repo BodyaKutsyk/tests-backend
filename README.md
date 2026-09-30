@@ -222,15 +222,54 @@ docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sq
 ```
 
 ## Grading
-### How to run the app without Infisical infrastructure
 
-To start the application without using Infisical, run:
+### Running without Infisical
+
+To execute commands without Infisical, use:
 
 ```bash
 SKIP_VAULT=1 pnpm infisical <command>
 ```
-where `<command>` is the script you want to execute. In this mode, environment variables are loaded from the local `.env` file instead of being injected by Infisical.
 
+Replace `<command>` with the command you want to execute. In this mode, environment variables are loaded from the local `.env` file.
+
+### Running the N+1 Demo
+
+**1. Start the Docker services.**
+
+With Infisical:
+
+```bash
+pnpm infisical docker compose up -d --wait
+```
+
+Without Infisical:
+
+```bash
+SKIP_VAULT=1 pnpm infisical docker compose up -d --wait
+```
+
+The `--wait` flag waits for the services to become running or healthy before proceeding.
+
+**2. Run the N+1 demonstration.**
+
+With Infisical:
+
+```bash
+pnpm infisical bash -c '
+  POSTGRES_HOST=127.0.0.1 pnpm demo:nplus1
+'
+```
+
+Without Infisical:
+
+```bash
+SKIP_VAULT=1 pnpm infisical bash -c '
+  POSTGRES_HOST=127.0.0.1 pnpm demo:nplus1
+'
+```
+
+`POSTGRES_HOST=127.0.0.1` overrides the Docker hostname because the demonstration runs directly on the host machine rather than inside a container.
 ### When to use QueryBuilder and Repository
 
 The project uses `Repository` for simple CRUD operations because it provides a straightforward and convenient API.
