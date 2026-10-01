@@ -15,18 +15,16 @@ import { readFile } from 'node:fs/promises';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<Env, true>) => {
-        const DB_PASSWORD_FILE = configService.get(
-          'POSTGRES_PASSWORD_FILE',
-        );
+        const DB_PASSWORD_FILE = configService.get('POSTGRES_PASSWORD_FILE');
 
         return {
           type: 'postgres',
-          host: 'db',
+          host: 'pg_bouncer',
           username: configService.get('POSTGRES_USER'),
           password: async () =>
             (await readFile(DB_PASSWORD_FILE, 'utf-8')).trim(),
           database: configService.get('POSTGRES_DB'),
-          autoLoadEntities: false
+          autoLoadEntities: false,
         };
       },
     }),

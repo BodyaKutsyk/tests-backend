@@ -27,7 +27,7 @@ RUN pnpm build
 FROM dev-deps AS dev
 CMD ["sh", "-c", "exec infisical run --projectId=\"$INFISICAL_PROJECT_ID\" --env=dev -- pnpm start:dev"]
 HEALTHCHECK --interval=5s --timeout=3s \
-    CMD node src/utils/api-health-check.ts || exit 1
+    CMD node dist/utils/api-health-check.js || exit 1
 
 FROM prod-deps AS prod
 COPY --from=build /app/dist /app/dist

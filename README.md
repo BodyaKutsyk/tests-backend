@@ -233,6 +233,24 @@ SKIP_VAULT=1 pnpm infisical <command>
 
 Replace `<command>` with the command you want to execute. In this mode, environment variables are loaded from the local `.env` file.
 
+### Backup and Restore Drill
+
+To create a database backup manually:
+
+```bash
+pnpm infisical docker exec pg_backup /bin/sh scripts/backup.sh
+```
+
+The backup is created in `custom` PostgreSQL format (`-Fc`) together with metadata used for validation.
+
+To run the restore drill:
+
+```bash
+pnpm infisical bash scripts/restore-drill.sh
+```
+
+The restore drill takes the latest backup, restores it into a clean temporary PostgreSQL container, compares the restored data with the saved metadata, and prints `MATCH` if validation succeeds. The temporary restore container is removed after the drill.
+
 ### Running the N+1 Demo
 
 **1. Start the Docker services.**
@@ -297,3 +315,9 @@ The application uses `RESTRICT` for relations referencing the `User` entity to p
 Atomic UPDATE was chosen to improve query performance and avoid unnecessary explicit row locking.
 The retry mechanism handles two PostgreSQL error codes: `40001` and `40P01`. 
 In both cases, PostgreSQL aborts the affected transaction, so the operation must be retried in a new transaction.
+
+### Postgres Connection Pool `transaction` mode
+PgBouncer uses transaction mode to reuse database connections more efficiently. A client keeps the same PostgreSQL connection only during a transaction, and after COMMIT or ROLLBACK that connection returns to the pool. Because of this, session-level state is not reliable between transactions: regular SET, LISTEN, and session-level prepared statements may not work as expected across different transactions. SET LOCAL is safe because it only applies inside the current transaction.
+
+
+
