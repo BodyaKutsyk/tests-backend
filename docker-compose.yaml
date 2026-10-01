@@ -97,6 +97,42 @@ services:
       interval: 2s
       timeout: 3s
       retries: 10
+  backup:
+    image: postgres:17-alpine
+    container_name: pg_backup
+    depends_on:
+      - db
+    environment:
+      POSTGRES_ADMIN: ${POSTGRES_ADMIN}
+      POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "find /backups/.last_success -mmin -1560 -print -quit | grep -q ."
+        ]
+      interval: 5m
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - ./scripts/backup.cron:/etc/crontabs/backup:ro
+    command: ["crond", "-f", "-l", "2"]
+  restore-drill:
+    image: postgres:17
+    container_name: pg_restore-drill
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    tmpfs:
+      - /var/lib/postgresql/data
+    profiles:
+      - restore
+    volumes:
+      - ./backups:/backups:ro
 
 secrets:
   db_password:
@@ -104,3 +140,4 @@ secrets:
 
 volumes:
   postgres_data:
+  restore_drill_data:
