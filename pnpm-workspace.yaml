@@ -1,3 +1,8 @@
 allowBuilds:
+  '@parcel/watcher': false
   '@scarf/scarf': false
+  cpu-features: false
   esbuild: false
+  protobufjs: false
+  ssh2: false
+  unrs-resolver: false
