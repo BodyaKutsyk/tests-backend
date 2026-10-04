@@ -17,11 +17,11 @@ export enum QuotaType {
 }
 
 @Check(`"used" <= "max_limit"`)
-@Index(['user', 'quota_type'], { unique: true })
+@Index(['user', 'quotaType'], { unique: true })
 @Entity('quotas')
 export class Quota extends Base {
   @Column({ type: 'enum', enum: QuotaType })
-  quota_type: QuotaType;
+  quotaType: QuotaType;
 
   @Column({
     type: 'bigint',
@@ -30,7 +30,7 @@ export class Quota extends Base {
       to: (val: number) => val,
     },
   })
-  max_limit: string;
+  maxLimit: string;
 
   @Column({
     type: 'bigint',

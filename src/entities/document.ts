@@ -13,18 +13,18 @@ import { User } from './user.js';
 import { Test } from './test.js';
 import { GenerationJob } from './generation-job.js';
 
-@Index(['created_at', 'mime_type'])
+@Index(['createdAt', 'mimeType'])
 @Entity('documents')
 export class Document extends BaseWithDeleted {
   @Column({ type: 'varchar', length: 512 })
-  storage_key: string;
+  storageKey: string;
 
   @Index('idx_document_file_name_length', { synchronize: false })
   @Column({ type: 'varchar', length: 254 })
   name: string;
 
   @Column({ type: 'varchar', length: 100 })
-  mime_type: string;
+  mimeType: string;
 
   @Column({ type: 'bigint' })
   size: string;

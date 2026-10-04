@@ -5,6 +5,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Env, validate } from './config/env.schema.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { readFile } from 'node:fs/promises';
+import { UsersModule } from './users/users.module.js';
+import { entitiesPath } from './data-source.js';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 @Module({
   imports: [
@@ -24,10 +27,12 @@ import { readFile } from 'node:fs/promises';
           password: async () =>
             (await readFile(DB_PASSWORD_FILE, 'utf-8')).trim(),
           database: configService.get('POSTGRES_DB'),
-          autoLoadEntities: false,
+          namingStrategy: new SnakeNamingStrategy(),
+          entities: [entitiesPath],
         };
       },
     }),
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

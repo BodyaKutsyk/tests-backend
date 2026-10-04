@@ -26,7 +26,7 @@ export class Question extends Base {
 
   @ManyToOne(() => Test, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'test_id' })
-  test: Test;
+  test: Relation<Test>;
 
   @OneToMany(() => AnswerOption, (answerOption) => answerOption.question, {
     cascade: ['insert'],

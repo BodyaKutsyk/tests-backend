@@ -16,7 +16,7 @@ export class AnswerOption extends Base {
   value: string;
 
   @Column({ type: 'boolean', default: false })
-  is_correct: boolean;
+  isCorrect: boolean;
 
   @ManyToOne(() => Question, (question) => question.answerOptions, {
     onDelete: 'CASCADE',

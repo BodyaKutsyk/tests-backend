@@ -81,18 +81,18 @@ async function raceTransaction() {
     const userRepo = dataSource.getRepository(User);
     const user = await userRepo.save(
       userRepo.create({
-        first_name: 'Test',
-        last_name: 'User',
+        firstName: 'Test',
+        lastName: 'User',
         email: `user-${id}@testing.com`,
-        password_hash: '12345678',
+        passwordHash: '12345678',
         quotas: [
           {
-            max_limit: String(MAX_LIMIT),
-            quota_type: QuotaType.Storage,
+            maxLimit: String(MAX_LIMIT),
+            quotaType: QuotaType.Storage,
           },
           {
-            max_limit: '100',
-            quota_type: QuotaType.Generation,
+            maxLimit: '100',
+            quotaType: QuotaType.Generation,
           },
         ],
       }),
@@ -111,7 +111,7 @@ async function raceTransaction() {
       .andWhere('quota_type = :type', { type: QuotaType.Storage })
       .getOneOrFail();
 
-    const maxStorage = quota.max_limit;
+    const maxStorage = quota.maxLimit;
     const used = quota.used;
 
     console.log(
