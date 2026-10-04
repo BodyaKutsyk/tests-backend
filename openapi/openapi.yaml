@@ -31,7 +31,7 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/File'
-                  next_cursor:
+                  nextCursor:
                     nullable: true
                     type: string
         401:
@@ -122,7 +122,7 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/UserResponse'
-                  next_cursor:
+                  nextCursor:
                     nullable: true
                     type: string
         401:
@@ -300,7 +300,7 @@ components:
     Cursor:
       name: cursor
       in: query
-      description: Token used to track last sent item. Can be retrieved from POST response value next_cursor. If next_cursor = null than no data remained to send
+      description: Token used to track last sent item. Can be retrieved from POST response value nextCursor. If nextCursor = null than no data remained to send
 
       required: false
       schema:
