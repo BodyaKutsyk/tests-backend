@@ -7,6 +7,7 @@ export default {
   testEnvironment: 'node',
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   testMatch: ['**/*.e2e-spec.ts'],
+  setupFiles: ['<rootDir>/test-setup.js'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
