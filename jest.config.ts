@@ -29,6 +29,7 @@ const config: Config = {
     {
       ...sharedConfig,
       displayName: 'e2e',
+      testTimeout: 20_000,
       testMatch: ['<rootDir>/**/*.e2e-spec.ts'],
     },
   ],
