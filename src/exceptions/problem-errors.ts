@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
-interface ProblemResponse {
+export interface ProblemData {
   title: string;
   instance?: string;
   status: number;
@@ -10,13 +10,14 @@ interface ProblemResponse {
   // type: string;
 }
 
-type ProblemArgs = Partial<Pick<ProblemResponse, 'title' | 'status'>> &
-  Omit<ProblemResponse, 'title' | 'status'>;
+type ProblemArgs = Partial<Pick<ProblemData, 'title' | 'status'>> &
+  Omit<ProblemData, 'title' | 'status'>;
 
 export class Problem extends HttpException {
-  private readonly statusCode: number;
+  public readonly statusCode: number;
   public readonly title: string;
   public readonly instance?: string;
+  public readonly detail?: string;
   public readonly extensions: Record<string, unknown>;
 
   constructor({
@@ -25,12 +26,13 @@ export class Problem extends HttpException {
     detail = 'Something went wrong while processing the request',
     instance = '/',
     extensions = {},
-  }: ProblemArgs) {
+  }: ProblemArgs = {}) {
     super(detail ?? title, HttpStatus.INTERNAL_SERVER_ERROR);
     this.title = title;
     this.statusCode = status;
     this.instance = instance;
     this.extensions = extensions;
+    this.detail = detail;
   }
 }
 

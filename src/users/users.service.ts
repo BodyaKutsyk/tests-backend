@@ -1,5 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { MoreThan, Repository, Equal, QueryFailedError } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  MoreThan,
+  Repository,
+  Equal,
+  QueryFailedError,
+  EntityNotFoundError,
+} from 'typeorm';
 import { User } from '../entities/user.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CursorDto } from '../types/cursor.dto.js';
@@ -7,7 +13,10 @@ import { encodeCursor } from '../utils/encode-cursor.js';
 import { PaginatedResponse } from '../types/response.js';
 import { CreateUserDto } from './types/user.dto.js';
 import { encodeBase64 } from '../utils/base64.js';
-import { ConflictProblem } from '../exceptions/problem-errors.js';
+import {
+  ConflictProblem,
+  NotFoundProblem,
+} from '../exceptions/problem-errors.js';
 
 @Injectable()
 export class UsersService {
@@ -44,7 +53,13 @@ export class UsersService {
   }
 
   async getById(id: string): Promise<User> {
-    return this.usersRepo.findOneOrFail({ where: { id } });
+    const user = await this.usersRepo.findOne({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundProblem({ detail: `User ${id} not found` });
+    }
+
+    return user;
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {

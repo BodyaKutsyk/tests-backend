@@ -87,11 +87,11 @@ async function raceTransaction() {
         passwordHash: '12345678',
         quotas: [
           {
-            maxLimit: String(MAX_LIMIT),
+            maxLimit: MAX_LIMIT,
             quotaType: QuotaType.Storage,
           },
           {
-            maxLimit: '100',
+            maxLimit: 100,
             quotaType: QuotaType.Generation,
           },
         ],
