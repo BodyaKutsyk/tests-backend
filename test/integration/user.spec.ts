@@ -1,24 +1,17 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { Client } from 'pg';
+import { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { seedUsers } from '../../db/seeds/seed-users.js';
+import { DataSource } from 'typeorm';
+import { Client } from 'pg';
+import { User } from '../../src/entities/user.js';
+import { initializeTestDatabase } from '../utils/init-db.js';
 
 describe('User repository (integration)', () => {
   let container: StartedPostgreSqlContainer;
+  let dataSource: DataSource;
   let client: Client;
 
   beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:17-alpine').start();
-    client = new Client({
-      host: container.getHost(),
-      port: container.getPort(),
-      database: container.getDatabase(),
-      user: container.getUsername(),
-      password: container.getPassword(),
-    });
-    await client.connect();
+    ({ container, dataSource, client } = await initializeTestDatabase());
   });
 
   test('Sends response', async () => {
@@ -26,27 +19,39 @@ describe('User repository (integration)', () => {
     expect(result.rows[0]).toEqual({ '?column?': 1 });
   });
 
-  test('seeds users', async () => {
-    const expectedUsersCount = 100_000;
-    await client.query(`CREATE TABLE users (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      email TEXT UNIQUE NOT NULL,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW(),
-      deleted_at TIMESTAMPTZ
-    );`);
-    await seedUsers(client);
-    const usersCount: string = (
-      await client.query('SELECT COUNT(*) FROM users')
-    ).rows[0].count;
+  test('Seeds 100 users', async () => {
+    const expectedUsersCount = 100;
+    const userRepo = dataSource.getRepository(User);
+
+    await seedUsers(client, expectedUsersCount);
+    const usersCount = await userRepo.count();
+
     expect(Number(usersCount)).toEqual(expectedUsersCount);
+  }, 10_000);
+  test('Throws 23505 error on duplicate emails', async () => {
+    const email = 'test@gmail.com';
+    const userRepo = dataSource.getRepository(User);
+
+    await userRepo.save({
+      email,
+      firstName: 'John',
+      lastName: 'Doe',
+      passwordHash: '12345',
+    });
+
+    await expect(
+      userRepo.save({
+        email,
+        firstName: 'Duplicate',
+        lastName: 'Doe',
+        passwordHash: '12345',
+      }),
+    ).rejects.toMatchObject({ code: '23505' });
   });
 
   afterAll(async () => {
     await client?.end();
+    await dataSource?.destroy();
     await container?.stop();
   });
 });
