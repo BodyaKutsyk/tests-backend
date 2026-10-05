@@ -41,9 +41,12 @@ export class Test extends BaseWithDeleted {
 
   @Index('idx_tests_search_vector', { synchronize: false })
   @Column({
+    name: 'search_vector',
     type: 'tsvector',
     generatedType: 'STORED',
     asExpression: "to_tsvector('simple', name || '')",
+    insert: false,
+    update: false,
   })
   searchVector: string;
 }

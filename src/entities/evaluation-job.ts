@@ -27,6 +27,9 @@ export class EvaluationJob extends Base {
   })
   status: EvaluationJobStatus;
 
+  @Column({ type: 'int', default: 0 })
+  processed: number;
+
   @OneToMany(() => Evaluation, (evaluation) => evaluation.evaluationJob)
   evaluations: Relation<Evaluation[]>;
 
