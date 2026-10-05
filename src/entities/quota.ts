@@ -30,7 +30,7 @@ export class Quota extends Base {
       to: (val: number) => val,
     },
   })
-  maxLimit: string;
+  maxLimit: number;
 
   @Column({
     type: 'bigint',
@@ -40,7 +40,7 @@ export class Quota extends Base {
       to: (val: number) => val,
     },
   })
-  used: string;
+  used: number;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })

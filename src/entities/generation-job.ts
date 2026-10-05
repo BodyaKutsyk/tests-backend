@@ -33,6 +33,9 @@ export class GenerationJob extends Base {
   @Column({ type: 'int' })
   questionCount: number;
 
+  @Column({ type: 'int', default: 0 })
+  processed: number
+
   @OneToOne(() => Test, (test) => test.generationJob, {
     nullable: true,
     onDelete: 'CASCADE',

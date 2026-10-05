@@ -1,8 +1,9 @@
-import { dataSourceOptions } from './data-source.js';
 import { User } from './entities/user.js';
 import { Test } from './entities/test.js';
-import { QueryLogger } from './utils/query-logger.js';
 import { DataSource } from 'typeorm';
+import { Quota, QuotaType } from './entities/quota.js';
+import { GenerationJob, JobStatus } from './entities/generation-job.js';
+import { QuestionType } from './types/temporary.js';
 
 const questions = [
   {
@@ -221,29 +222,42 @@ const questions = [
   },
 ];
 
-async function createTestTransaction() {
-  try {
-    const logger = new QueryLogger();
-    const dataSource = new DataSource({
-      ...dataSourceOptions,
-      logger,
-    });
-    await dataSource.initialize();
+export async function createTestTransaction(dataSource: DataSource) {
+  await dataSource.transaction('READ COMMITTED', async (manager) => {
+    const userRepo = manager.getRepository(User);
+    const testRepo = manager.getRepository(Test);
+    const generationJobRepo = manager.getRepository(GenerationJob);
+    const user = await userRepo.findOneOrFail({ where: {} });
 
-    await dataSource.transaction('READ COMMITTED', async (manager) => {
-      const userRepo = dataSource.getRepository(User);
-      const user = await userRepo.findOneOrFail({ where: {} });
-      const testRepo = manager.getRepository(Test);
+    const result = await manager
+      .createQueryBuilder()
+      .update(Quota)
+      .set({
+        used: () => '"used" + 1024',
+      })
+      .where('"user_id" = :userId', { userId: user.id })
+      .andWhere('"quota_type" = :quotaType', {
+        quotaType: QuotaType.Storage,
+      })
+      .andWhere('"used" + 1024 <= "max_limit"')
+      .returning('*')
+      .execute();
 
-      await testRepo.save({
-        name: 'Learn transaction isolation',
-        user,
-        questions,
-      });
+    if (result.affected === 0) {
+      throw new Error('Quota exceeded');
+    }
+    const generationJob = await generationJobRepo.save({
+      user: { id: user.id },
+      questionCount: questions.length,
+      questionType: QuestionType.MultipleChoice,
+      status: JobStatus.Queued,
     });
-  } catch (e) {
-    console.log(e);
-  }
+
+    generationJob.test = await testRepo.save({
+      name: 'Learn transaction isolation',
+      user,
+      questions,
+    });
+    await generationJobRepo.save(generationJob);
+  });
 }
-
-await createTestTransaction();
