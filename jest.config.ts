@@ -32,6 +32,12 @@ const config: Config = {
       testTimeout: 20_000,
       testMatch: ['<rootDir>/**/*.e2e-spec.ts'],
     },
+    {
+      ...sharedConfig,
+      displayName: 'pact',
+      testTimeout: 20_000,
+      testMatch: ['<rootDir>/**/*.contract-spec.ts'],
+    },
   ],
 };
 
