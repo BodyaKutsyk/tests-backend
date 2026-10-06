@@ -4,6 +4,7 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   ConflictProblem,
@@ -19,10 +20,43 @@ interface ProblemResponse extends Exclude<ProblemData, 'statusCode'> {
   status: number;
 }
 
+function extractValidationErrors(exception: UnprocessableEntityException): {
+  detail: string;
+  errors?: Record<string, string[]>;
+} {
+  const response = exception.getResponse();
+
+  if (typeof response === 'string') {
+    return {
+      detail: response,
+    };
+  }
+
+  const { detail = 'Validation failed', errors } = response as {
+    detail?: string;
+    errors?: Record<string, string[]>;
+  };
+
+  return {
+    detail,
+    errors,
+  };
+}
+
 function transformHttpExceptionToProblem(exception: HttpException) {
   switch (exception.getStatus()) {
     case HttpStatus.UNPROCESSABLE_ENTITY:
-      return new UnprocessableProblem();
+      const validationError = exception as UnprocessableEntityException;
+      const { detail, errors } = extractValidationErrors(validationError);
+
+      return new UnprocessableProblem({
+        detail,
+        ...(!!Object.values(errors || {}).length && {
+          extensions: {
+            errors,
+          },
+        }),
+      });
     case HttpStatus.NOT_FOUND:
       return new NotFoundProblem();
     case HttpStatus.UNAUTHORIZED:
@@ -30,7 +64,6 @@ function transformHttpExceptionToProblem(exception: HttpException) {
     case HttpStatus.CONFLICT:
       return new ConflictProblem();
     default:
-      console.log(exception);
       return new Problem({
         status: exception.getStatus(),
         title: exception.name,
@@ -43,6 +76,7 @@ function transformHttpExceptionToProblem(exception: HttpException) {
 export class ProblemExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
+    const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
     let problem: Problem;
     const isProblem = exception instanceof Problem;
@@ -55,22 +89,16 @@ export class ProblemExceptionFilter implements ExceptionFilter {
       problem = new Problem();
     }
 
-    console.log(
-      isProblem,
-      exception instanceof HttpException,
-      // @ts-ignore
-      exception.getStatus(),
-    );
-
-    const { title, statusCode, instance, detail, extensions } = problem;
+    const { title, statusCode, detail, extensions } = problem;
     const problemResponse: ProblemResponse = {
       title,
       status: statusCode,
-      instance,
+      instance: request.path,
       ...(!!Object.keys(extensions).length && { extensions }),
       ...(detail && { detail }),
     };
 
+    response.type('application/problem+json');
     response.status(statusCode).json(problemResponse);
   }
 }

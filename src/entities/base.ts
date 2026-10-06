@@ -15,6 +15,6 @@ export abstract class Base {
 }
 
 export abstract class BaseWithDeleted extends Base {
-  @DeleteDateColumn({ type: 'timestamptz' })
+  @DeleteDateColumn({ type: 'timestamptz', select: false })
   deletedAt: Date | null;
 }
