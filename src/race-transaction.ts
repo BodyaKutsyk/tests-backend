@@ -4,91 +4,94 @@ import { dataSourceOptions } from './data-source.js';
 import { User } from './entities/user.js';
 import { Quota, QuotaType } from './entities/quota.js';
 import { randomUUID } from 'crypto';
+import { createTestTransaction } from './create-test-transaction.js';
 
-const AMOUNT_TO_INCREASE = 1_024;
-const MAX_LIMIT = 10_240;
-
-async function increaseUserUsedStorage(dataSource: DataSource, userId: string) {
-  const queryRunner = dataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-
-  const updatedQuota = await queryRunner.manager
-    .createQueryBuilder()
-    .update(Quota)
-    .set({ used: () => '"used" + :amount' })
-    .setParameters({ amount: AMOUNT_TO_INCREASE })
-    .where('user_id = :id', { id: userId })
-    .andWhere('quota_type = :type', { type: QuotaType.Storage })
-    .andWhere('used <= max_limit - :amount', { amount: AMOUNT_TO_INCREASE })
-    .returning('used, max_limit')
-    .execute();
-
-  await queryRunner.commitTransaction();
-  await queryRunner.release();
-  return updatedQuota.raw;
-}
+const ATTEMPTS = 50;
+const AMOUNT_PER_TEST = 1024;
+const MAX_LIMIT = 10 * AMOUNT_PER_TEST;
 
 async function raceTransaction() {
+  const logger = new QueryLogger();
+  const dataSource = new DataSource({
+    ...dataSourceOptions,
+    logger,
+  });
+  await dataSource.initialize();
   try {
-    const logger = new QueryLogger();
-    const dataSource = new DataSource({
-      ...dataSourceOptions,
-      logger,
-    });
-    await dataSource.initialize();
-    const id = randomUUID();
-
     const userRepo = dataSource.getRepository(User);
-    const user = await userRepo.save(
-      userRepo.create({
-        firstName: 'Test',
-        lastName: 'User',
-        email: `user-${id}@testing.com`,
-        passwordHash: '12345678',
-        quotas: [
-          {
-            maxLimit: MAX_LIMIT,
-            quotaType: QuotaType.Storage,
-          },
-          {
-            maxLimit: 100,
-            quotaType: QuotaType.Generation,
-          },
-        ],
-      }),
-    );
-    const promises = Array.from({ length: 50 }, () =>
-      increaseUserUsedStorage(dataSource, user.id),
-    );
-
-    const expectedSuccessful = MAX_LIMIT / AMOUNT_TO_INCREASE;
-    const results = await Promise.all(promises);
-    const quota = await dataSource
-      .createQueryBuilder(Quota, 'quota')
-      .where('user_id = :id', { id: user.id })
-      .andWhere('quota_type = :type', { type: QuotaType.Storage })
-      .getOneOrFail();
-
-    const maxStorage = quota.maxLimit;
-    const used = quota.used;
-    let attempts = 0;
-    let successful = 0;
-    let rejected = 0;
-    results.forEach((result) => {
-      attempts++;
-      result.length > 0 ? successful++ : rejected++;
+    const quotaRepo = dataSource.getRepository(Quota);
+    const user = await userRepo.findOneOrFail({
+      where: {},
     });
 
-    console.log(
-      `Attempts: ${attempts}\nSuccessful: ${successful}\nRejected: ${rejected}\nFinal used: ${used}\nMax limit: ${maxStorage}`,
+    let quota = await quotaRepo.findOne({
+      where: {
+        user: { id: user.id },
+        quotaType: QuotaType.Storage,
+      },
+    });
+
+    if (!quota) {
+      quota = quotaRepo.create({
+        user: { id: user.id },
+        quotaType: QuotaType.Storage,
+        used: 0,
+        maxLimit: MAX_LIMIT,
+      });
+    } else {
+      quota.used = 0;
+      quota.maxLimit = MAX_LIMIT;
+    }
+
+    await quotaRepo.save(quota);
+
+    const results = await Promise.allSettled(
+      Array.from({ length: ATTEMPTS }, () => createTestTransaction(dataSource)),
     );
 
-    process.exit(
-      Number(!(expectedSuccessful === successful && used <= maxStorage)),
-    );
-  } catch (e) {
-    console.log(e);
+    const successful = results.filter(
+      (result) => result.status === 'fulfilled',
+    ).length;
+
+    const failed = results.filter(
+      (result) => result.status === 'rejected',
+    ).length;
+
+    const finalQuota = await quotaRepo.findOneOrFail({
+      where: {
+        user: { id: user.id },
+        quotaType: QuotaType.Storage,
+      },
+    });
+
+    const remaining = finalQuota.maxLimit - finalQuota.used;
+
+    const overLimitCount = await quotaRepo
+      .createQueryBuilder('quota')
+      .where('"quota"."used" > "quota"."max_limit"')
+      .getCount();
+
+    console.log(`Attempts: ${ATTEMPTS}`);
+    console.log(`Successful: ${successful}`);
+    console.log(`Failed: ${failed}`);
+    console.log(`Final used: ${finalQuota.used}`);
+    console.log(`Final remaining quota: ${remaining}`);
+    console.log(`Over limit rows: ${overLimitCount}`);
+
+    const invariantHolds =
+      successful === 10 &&
+      finalQuota.used === MAX_LIMIT &&
+      remaining === 0 &&
+      overLimitCount === 0;
+
+    if (!invariantHolds) {
+      console.error('Race condition invariant failed');
+      process.exitCode = 1;
+    } else {
+      console.log('Race condition invariant passed');
+    }
+  } finally {
+    await dataSource.destroy();
   }
 }
 

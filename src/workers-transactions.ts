@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import { dataSourceOptions } from './data-source.js';
 import { QueryLogger } from './utils/query-logger.js';
 import { GenerationJob, JobStatus } from './entities/generation-job.js';
@@ -17,8 +17,8 @@ async function createTestJobs(dataSource: DataSource, user: User) {
     { length: JOBS_AMOUNT },
     (_, index) => ({
       user,
-      question_count: 10,
-      question_type: questionTypes[index % questionTypes.length],
+      questionCount: 10,
+      questionType: questionTypes[index % questionTypes.length],
     }),
   );
 
@@ -78,6 +78,8 @@ async function transactionWithWorkers() {
     .where({})
     .getOneOrFail();
 
+  const generationJobRepo = dataSource.getRepository(GenerationJob);
+
   await createTestJobs(dataSource, user);
   const startTime = new Date().getTime();
   const results = await workersManager.run(() =>
@@ -87,6 +89,13 @@ async function transactionWithWorkers() {
     (prev, curr) => (prev += curr.count),
     0,
   );
+  const processedTwice = await generationJobRepo.count({
+    where: {
+      processed: MoreThan(1),
+    },
+  });
+
+  console.log(`Processed more than once: ${processedTwice}`);
   const executionTime = (new Date().getTime() - startTime) / 1000;
   console.log(
     `[${executionTime} s] Workers did total: ${totalOperations} operations`,
