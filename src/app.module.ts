@@ -8,6 +8,9 @@ import { readFile } from 'node:fs/promises';
 import { UsersModule } from './users/users.module.js';
 import { entitiesPath } from './data-source.js';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { ProblemExceptionFilter } from './exceptions/problem-exception-filter.js';
+import { AppValidationPipe } from './pipes/app-validation.pipe.js';
 
 @Module({
   imports: [
@@ -35,6 +38,16 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_PIPE,
+      useClass: AppValidationPipe,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ProblemExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}

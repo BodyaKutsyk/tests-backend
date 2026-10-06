@@ -20,7 +20,7 @@ interface ProblemResponse extends Exclude<ProblemData, 'statusCode'> {
   status: number;
 }
 
-function extractValidationErrors(exception: UnprocessableEntityException): {
+function extractUnprocessableError(exception: UnprocessableEntityException): {
   detail: string;
   errors?: Record<string, string[]>;
 } {
@@ -32,30 +32,49 @@ function extractValidationErrors(exception: UnprocessableEntityException): {
     };
   }
 
-  const { detail = 'Validation failed', errors } = response as {
+  const data = response as {
     detail?: string;
+    message?: string | string[];
     errors?: Record<string, string[]>;
   };
 
+  if (data.detail) {
+    return {
+      detail: data.detail,
+      errors: data.errors,
+    };
+  }
+
+  if (typeof data.message === 'string') {
+    return {
+      detail: data.message,
+    };
+  }
+
+  if (Array.isArray(data.message)) {
+    return {
+      detail: data.message.join(', '),
+    };
+  }
+
   return {
-    detail,
-    errors,
+    detail: exception.message || 'Validation failed',
   };
 }
-
 function transformHttpExceptionToProblem(exception: HttpException) {
   switch (exception.getStatus()) {
     case HttpStatus.UNPROCESSABLE_ENTITY:
       const validationError = exception as UnprocessableEntityException;
-      const { detail, errors } = extractValidationErrors(validationError);
+      const { detail, errors } = extractUnprocessableError(validationError);
 
       return new UnprocessableProblem({
         detail,
-        ...(!!Object.values(errors || {}).length && {
-          extensions: {
-            errors,
-          },
-        }),
+        ...(errors &&
+          Object.keys(errors).length > 0 && {
+            extensions: {
+              errors,
+            },
+          }),
       });
     case HttpStatus.NOT_FOUND:
       return new NotFoundProblem();
