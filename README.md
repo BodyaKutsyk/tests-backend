@@ -174,14 +174,16 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Environment variables
 
 ```text
-API_INTERNAL_PORT        -> Internal port used by the backend API inside the container.
-API_EXTERNAL_PORT        -> External host port mapped to the backend API.
+API_PORT                 -> Host port mapped to the backend API.
 POSTGRES_DB              -> Name of the PostgreSQL database.
 POSTGRES_USER            -> PostgreSQL application user used by the backend.
 POSTGRES_USER_PASSWORD   -> Initial password for the PostgreSQL application user.
 POSTGRES_ADMIN           -> PostgreSQL administrator username.
 POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
+POSTGRES_PORT            -> Connection port to the PostgreSQL
+POSTGRES_HOST            -> Host of the PostgreSQL
+
 PACT_BROKER_DB_NAME=contract-broker -> Pact broker postgres name
 PACT_BROKER_DB_USER=pact-broker-admin -> Pact broker postgres user name
 PACT_BROKER_DB_PASSWORD=pact-broker-admin-password -> ## Pact broker postgres user password
@@ -227,6 +229,17 @@ docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sq
 ```
 
 ## Grading
+
+### 0. Prepare Environment Variables                                                                                                                                                                                         
+                                                                                                                                                                                                                           
+Before running grading commands directly on the host, export the database variables:                                                                                                                                         
+                                                                                                                                                                                                                           
+```bash                                                                                                                                                                                                                      
+export POSTGRES_DB=my_db                                                                                                                                                                                                     
+export POSTGRES_ADMIN=admin                                                                                                                                                                                                  
+export POSTGRES_ADMIN_PASSWORD=admin_password                                                                                                                                                                                
+export POSTGRES_HOST=127.0.0.1                                                                                                                                                                                               
+export POSTGRES_PORT=5432   
 
 ### Running without Infisical
 
@@ -293,6 +306,14 @@ SKIP_VAULT=1 pnpm infisical bash -c '
 ```
 
 `POSTGRES_HOST=127.0.0.1` overrides the Docker hostname because the demonstration runs directly on the host machine rather than inside a container.
+
+#### Results of n+1
+```
+Selecting 50 users that have tests.
+Before fix: 51 queries
+After fix: 1 query
+```
+
 ### When to use QueryBuilder and Repository
 
 The project uses `Repository` for simple CRUD operations because it provides a straightforward and convenient API.

@@ -12,19 +12,27 @@ jobs:
       PACT_BROKER_URL: http://localhost:9292
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: pact-foundation/pact-cli@main
 
       - name: Start Pact Broker
         run: docker compose -f docker-compose.pact.yml up -d --wait
 
       - name: Consumer contract test
-        run: pnpm test:contract
+        run: pnpm test:contract:consumer
 
       - name: Consumer contract publishing
         run: pnpm contract:publish "${PACT_BROKER_URL}"
+
+      - name: Provider contract test
+        run: pnpm test:contract:provider "${PACT_BROKER_URL}"
 
       - name: Provider verification
         run: pnpm verify:provider "${PACT_BROKER_URL}"

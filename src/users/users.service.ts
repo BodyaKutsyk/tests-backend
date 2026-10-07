@@ -35,6 +35,13 @@ export class UsersService {
       },
       take: limit,
     });
+
+    if (!users.length) {
+      return {
+        items: users,
+      };
+    }
+
     const lastItem = users[users.length - 1];
     const nextCursor = encodeCursor({
       id: lastItem.id,

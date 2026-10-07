@@ -38,6 +38,12 @@ const config: Config = {
       testTimeout: 20_000,
       testMatch: ['<rootDir>/**/*.consumer.pact-spec.ts'],
     },
+    {
+      ...sharedConfig,
+      displayName: 'provider',
+      testTimeout: 20_000,
+      testMatch: ['<rootDir>/**/*.verification.pact-spec.ts'],
+    },
   ],
 };
 
