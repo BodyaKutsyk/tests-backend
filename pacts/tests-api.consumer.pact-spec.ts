@@ -1,11 +1,11 @@
 import { Pact, Matchers } from '@pact-foundation/pact';
 import { User } from '../src/entities/user.js';
 
-const path = new URL('pacts', import.meta.url).pathname;
+const path = new URL('contracts', import.meta.url).pathname;
 
 const pact = new Pact({
-  provider: 'testsProvider',
-  consumer: 'consumersProvider',
+  provider: 'tests-api',
+  consumer: 'frontend',
   dir: path,
 });
 

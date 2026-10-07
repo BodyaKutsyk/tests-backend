@@ -1,6 +1,6 @@
 {
   "consumer": {
-    "name": "consumersProvider"
+    "name": "frontend"
   },
   "interactions": [
     {
@@ -119,6 +119,6 @@
     }
   },
   "provider": {
-    "name": "testsProvider"
+    "name": "tests-api"
   }
 }

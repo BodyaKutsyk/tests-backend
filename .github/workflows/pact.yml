@@ -1,0 +1,30 @@
+name: Pact contract tests
+run-name: pact contract tests
+on: [push]
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    env:
+      PACT_BROKER_PORT: 9292
+      PACT_BROKER_DB_USER: pact
+      PACT_BROKER_DB_PASSWORD: pact
+      PACT_BROKER_DB_NAME: pact
+      PACT_BROKER_URL: http://localhost:9292
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start Pact Broker
+        run: docker compose -f docker-compose.pact.yml up -d --wait
+
+      - name: Consumer contract test
+        run: pnpm test:contract
+
+      - name: Consumer contract publishing
+        run: pnpm contract:publish "${PACT_BROKER_URL}"
+
+      - name: Provider verification
+        run: pnpm verify:provider "${PACT_BROKER_URL}"

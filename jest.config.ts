@@ -34,9 +34,9 @@ const config: Config = {
     },
     {
       ...sharedConfig,
-      displayName: 'pact',
+      displayName: 'consumer',
       testTimeout: 20_000,
-      testMatch: ['<rootDir>/**/*.contract-spec.ts'],
+      testMatch: ['<rootDir>/**/*.consumer.pact-spec.ts'],
     },
   ],
 };

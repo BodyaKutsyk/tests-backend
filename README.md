@@ -182,6 +182,11 @@ POSTGRES_USER_PASSWORD   -> Initial password for the PostgreSQL application user
 POSTGRES_ADMIN           -> PostgreSQL administrator username.
 POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
+PACT_BROKER_DB_NAME=contract-broker -> Pact broker postgres name
+PACT_BROKER_DB_USER=pact-broker-admin -> Pact broker postgres user name
+PACT_BROKER_DB_PASSWORD=pact-broker-admin-password -> ## Pact broker postgres user password
+PACT_BROKER_PORT=9292 -> Pact broker service port
+
 ```
 
 ### How to start
