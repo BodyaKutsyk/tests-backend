@@ -11,3 +11,5 @@
 
 - `RTO`: **6-8s**
 - `RPO`: **24 hours**
+- Date / Time: `2026-10-08` `18:19:41`
+- Dump size: `114463083` bytes

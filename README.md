@@ -182,6 +182,9 @@ POSTGRES_USER_PASSWORD   -> Initial password for the PostgreSQL application user
 POSTGRES_ADMIN           -> PostgreSQL administrator username.
 POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
+POSTGRES_PORT            -> Connection port to the PostgreSQL
+POSTGRES_HOST            -> Host of the PostgreSQL
+
 ```
 
 ### How to start

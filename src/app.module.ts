@@ -19,7 +19,8 @@ import { readFile } from 'node:fs/promises';
 
         return {
           type: 'postgres',
-          host: 'pg_bouncer',
+          host: configService.get('POSTGRES_HOST'),
+          port: configService.get('POSTGRES_PORT'),
           username: configService.get('POSTGRES_USER'),
           password: async () =>
             (await readFile(DB_PASSWORD_FILE, 'utf-8')).trim(),
