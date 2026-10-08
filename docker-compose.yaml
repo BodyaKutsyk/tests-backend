@@ -38,7 +38,6 @@ services:
     image: postgres:17
     container_name: postgres
     environment:
-      POSTGRES_HOST: db
       POSTGRES_USER: ${POSTGRES_ADMIN}
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -49,7 +48,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d ${POSTGRES_DB} --quiet" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN} -d ${POSTGRES_DB} --quiet" ]
       interval: 1s
       timeout: 5s
       retries: 10
@@ -107,6 +106,7 @@ services:
       POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
+      start_period: 24h
       test:
         [
           "CMD-SHELL",
@@ -119,6 +119,7 @@ services:
       - ./backups:/backups
       - ./scripts/backup.sh:/scripts/backup.sh:ro
       - ./scripts/backup.cron:/etc/crontabs/backup:ro
+      - ./scripts/backup.cron:/etc/crontabs/root:ro
     command: ["crond", "-f", "-l", "2"]
   restore-drill:
     image: postgres:17
