@@ -226,6 +226,17 @@ docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sq
 
 ## Grading
 
+### 0. Prepare Environment Variables                                                                                                                                                                                         
+                                                                                                                                                                                                                           
+Before running grading commands directly on the host, export the database variables:                                                                                                                                         
+                                                                                                                                                                                                                           
+```bash                                                                                                                                                                                                                      
+export POSTGRES_DB=my_db                                                                                                                                                                                                     
+export POSTGRES_ADMIN=admin                                                                                                                                                                                                  
+export POSTGRES_ADMIN_PASSWORD=admin_password                                                                                                                                                                                
+export POSTGRES_HOST=127.0.0.1                                                                                                                                                                                               
+export POSTGRES_PORT=5432   
+
 ### Running without Infisical
 
 To execute commands without Infisical, use:
@@ -291,6 +302,14 @@ SKIP_VAULT=1 pnpm infisical bash -c '
 ```
 
 `POSTGRES_HOST=127.0.0.1` overrides the Docker hostname because the demonstration runs directly on the host machine rather than inside a container.
+
+#### Results of n+1
+```
+Selecting 50 users that have tests.
+Before fix: 51 queries
+After fix: 1 query
+```
+
 ### When to use QueryBuilder and Repository
 
 The project uses `Repository` for simple CRUD operations because it provides a straightforward and convenient API.

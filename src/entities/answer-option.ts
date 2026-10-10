@@ -20,6 +20,7 @@ export class AnswerOption extends Base {
 
   @ManyToOne(() => Question, (question) => question.answerOptions, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   @JoinColumn({ name: 'question_id' })
   question: Relation<Question>;
