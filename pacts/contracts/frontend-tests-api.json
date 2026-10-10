@@ -1,0 +1,124 @@
+{
+  "consumer": {
+    "name": "frontend"
+  },
+  "interactions": [
+    {
+      "description": "a request to get users",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "limit": [
+            "10"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": {
+            "items": [
+              {
+                "createdAt": "2026-08-28T14:30:00.000Z",
+                "email": "test@example.com",
+                "firstName": "Jane",
+                "id": "d3b07384-d113-4956-a5e2-aa591974421b",
+                "lastName": "Doe",
+                "updatedAt": "2026-08-28T14:30:00.000Z"
+              }
+            ]
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$.items": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.items[*].createdAt": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "format": "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+                  "match": "datetime"
+                }
+              ]
+            },
+            "$.items[*].email": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.items[*].firstName": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.items[*].id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                }
+              ]
+            },
+            "$.items[*].lastName": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.items[*].updatedAt": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "format": "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+                  "match": "datetime"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "17.1.4"
+    },
+    "pactRust": {
+      "ffi": "0.5.8",
+      "models": "1.3.16"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "tests-api"
+  }
+}

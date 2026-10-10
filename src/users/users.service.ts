@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MoreThan, Repository, Equal, QueryFailedError } from 'typeorm';
+import { Equal, MoreThan, QueryFailedError, Repository } from 'typeorm';
 import { User } from '../entities/user.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CursorDto } from '../types/cursor.dto.js';
@@ -7,7 +7,11 @@ import { encodeCursor } from '../utils/encode-cursor.js';
 import { PaginatedResponse } from '../types/response.js';
 import { CreateUserDto } from './types/user.dto.js';
 import { encodeBase64 } from '../utils/base64.js';
-import { ConflictProblem } from '../exceptions/problem-errors.js';
+import {
+  ConflictProblem,
+  NotFoundProblem,
+} from '../exceptions/problem-errors.js';
+import { Quota, QuotaType } from '../entities/quota.js';
 
 @Injectable()
 export class UsersService {
@@ -31,6 +35,13 @@ export class UsersService {
       },
       take: limit,
     });
+
+    if (!users.length) {
+      return {
+        items: users,
+      };
+    }
+
     const lastItem = users[users.length - 1];
     const nextCursor = encodeCursor({
       id: lastItem.id,
@@ -44,15 +55,47 @@ export class UsersService {
   }
 
   async getById(id: string): Promise<User> {
-    return this.usersRepo.findOneOrFail({ where: { id } });
+    const user = await this.usersRepo.findOne({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundProblem({ detail: `User ${id} not found` });
+    }
+
+    return user;
+  }
+
+  async getWithQuota(id: string): Promise<User> {
+    const user = await this.usersRepo.findOne({
+      where: { id },
+      relations: { quotas: true },
+    });
+
+    if (!user) {
+      throw new NotFoundProblem({ detail: `User ${id} not found` });
+    }
+
+    return user;
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const { password, ...parsed } = createUserDto;
+    const basicStorageQuota: Partial<Quota> = {
+      maxLimit: 104_857_600,
+      quotaType: QuotaType.Storage,
+    };
+    const basicGenerationQuota: Partial<Quota> = {
+      maxLimit: 1000,
+      quotaType: QuotaType.Generation,
+    };
+
     // TODO: encoded like that before adding auth
     const passwordHash = encodeBase64(password);
     try {
-      return await this.usersRepo.save({ ...parsed, passwordHash });
+      return await this.usersRepo.save({
+        ...parsed,
+        passwordHash,
+        quotas: [basicStorageQuota, basicGenerationQuota],
+      });
     } catch (error) {
       if (
         error instanceof QueryFailedError &&

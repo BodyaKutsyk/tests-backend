@@ -8,6 +8,9 @@ x-infisical-env: &infisical-env
 x-infisical-hosts: &infisical-hosts
   - "host.docker.internal:host-gateway"
 
+include:
+  - docker-compose.pact.yml
+
 services:
   api:
     image: api_image
@@ -19,7 +22,6 @@ services:
       target: prod
 
     environment:
-      API_INTERNAL_PORT: ${API_INTERNAL_PORT}
       <<: *infisical-env
       POSTGRES_HOST: db
       INFISICAL_ENV: prod
@@ -27,7 +29,7 @@ services:
     extra_hosts: *infisical-hosts
 
     ports:
-      - "${API_EXTERNAL_PORT}:${API_INTERNAL_PORT}"
+      - "${API_PORT}:3000"
 
     depends_on:
       db:

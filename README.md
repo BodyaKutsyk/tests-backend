@@ -174,8 +174,7 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Environment variables
 
 ```text
-API_INTERNAL_PORT        -> Internal port used by the backend API inside the container.
-API_EXTERNAL_PORT        -> External host port mapped to the backend API.
+API_PORT                 -> Host port mapped to the backend API.
 POSTGRES_DB              -> Name of the PostgreSQL database.
 POSTGRES_USER            -> PostgreSQL application user used by the backend.
 POSTGRES_USER_PASSWORD   -> Initial password for the PostgreSQL application user.
@@ -184,6 +183,10 @@ POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
 POSTGRES_PORT            -> Connection port to the PostgreSQL
 POSTGRES_HOST            -> Host of the PostgreSQL
+PACT_BROKER_DB_NAME=contract-broker -> Pact broker postgres name
+PACT_BROKER_DB_USER=pact-broker-admin -> Pact broker postgres user name
+PACT_BROKER_DB_PASSWORD=pact-broker-admin-password -> ## Pact broker postgres user password
+PACT_BROKER_PORT=9292 -> Pact broker service port
 
 ```
 

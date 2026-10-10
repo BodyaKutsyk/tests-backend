@@ -32,7 +32,14 @@ export class UsersController {
 
   @Get(':id')
   getById(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    id: string,
   ): Promise<User> {
     return this.usersService.getById(id);
   }
