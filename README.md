@@ -183,7 +183,6 @@ POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
 POSTGRES_PORT            -> Connection port to the PostgreSQL
 POSTGRES_HOST            -> Host of the PostgreSQL
-
 PACT_BROKER_DB_NAME=contract-broker -> Pact broker postgres name
 PACT_BROKER_DB_USER=pact-broker-admin -> Pact broker postgres user name
 PACT_BROKER_DB_PASSWORD=pact-broker-admin-password -> ## Pact broker postgres user password
