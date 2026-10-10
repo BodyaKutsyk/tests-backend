@@ -33,7 +33,7 @@ describe('Provider Verification', () => {
     await seedUsers(client, 10);
 
     app = moduleFixture.createNestApplication();
-    await app.listen(0, '127.0.0.1');
+    await app.listen(Number(process.env.API_PORT) || 3000, '127.0.0.1');
   }, 20_000);
 
   it('passes consumer expectations', async () => {

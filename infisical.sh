@@ -32,9 +32,6 @@ SKIP_VAULT_FLAG="${SKIP_VAULT:-0}"
 IS_CI="${CI:-false}"
 
 if [[ "$SKIP_VAULT_FLAG" =~ ^(1|true|yes)$ ]] || [[ "$IS_CI" == "true" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-  if [[ ! -f .env && -f .env.example ]]; then
-    load_env_file .env.example
-  fi
   exec "$@"
 fi
 
