@@ -46,7 +46,7 @@ describe('Provider Verification', () => {
       providerVersion: '0.1',
       consumerVersionSelectors: [
         {
-          mainBranch: true,
+          latest: true,
         },
       ],
     });
