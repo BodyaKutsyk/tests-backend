@@ -50,7 +50,7 @@ async function processQueuedJob(dataSource: DataSource, userId: string) {
     const updatedJob = await queryRunner.manager
       .createQueryBuilder()
       .update(GenerationJob)
-      .set({ status: JobStatus.Parsing })
+      .set({ status: JobStatus.Parsing, processed: () => 'processed + 1' })
       .where('id = :id', { id: generationJob?.id })
       .returning('*')
       .execute();
