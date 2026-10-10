@@ -15,7 +15,7 @@ import { AppValidationPipe } from './pipes/app-validation.pipe.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      validate,
+      validate: process.env.NODE_ENV === 'test' ? undefined : validate,
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
