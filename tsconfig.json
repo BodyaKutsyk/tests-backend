@@ -18,8 +18,9 @@
     "skipLibCheck": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    "types": ["jest", "node"],
-    "lib": ["ES2023", "esnext.disposable"]
+    "types": ["jest", "node", "multer"],
+    "lib": ["ES2023", "esnext.disposable"],
+    "customConditions": ["node"]
   },
   "exclude": ["node_modules", "dist", "coverage", "backups"]
 }

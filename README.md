@@ -344,5 +344,12 @@ In both cases, PostgreSQL aborts the affected transaction, so the operation must
 ### Postgres Connection Pool `transaction` mode
 PgBouncer uses transaction mode to reuse database connections more efficiently. A client keeps the same PostgreSQL connection only during a transaction, and after COMMIT or ROLLBACK that connection returns to the pool. Because of this, session-level state is not reliable between transactions: regular SET, LISTEN, and session-level prepared statements may not work as expected across different transactions. SET LOCAL is safe because it only applies inside the current transaction.
 
+## Trade-offs
+
+### WebSocket vs SSE
+WebSocket provides low-latency, duplex communication, allowing both the client and server to send messages independently. However, when using the native WebSocket API, the client needs to handle reconnection, implement cursor-based event recovery, and manage other reliability features manually.
+
+SSE provides one-way communication from the server to the client. This approach is simpler and can be more lightweight for server-to-client updates, as it uses standard HTTP and does not require additional client-side libraries in browsers. Automatic reconnection is supported out of the box through the native browser EventSource API.
+
 
 
