@@ -25,7 +25,7 @@
     "test:contract:consumer": "pnpm test --selectProjects consumer",
     "test:contract:provider": "pnpm infisical pnpm test --selectProjects provider",
     "contract:publish": "pact broker publish ./pacts/contracts --consumer-app-version 0.1 --branch main --broker-base-url",
-    "contract:can-i-deploy": "pact broker can-i-deploy --pacticipant frontend --version 0.1 --pacticipant tests-api --version 0.1 --broker-base-url http://localhost:9292",
+    "contract:can-i-deploy": "pact broker can-i-deploy --pacticipant frontend --version 0.1 --pacticipant tests-api --version 0.1 --broker-base-url",
     "openapi:lint": "npx @redocly/cli lint openapi/openapi.yaml",
     "openapi:build": "npx @redocly/cli build-docs openapi/openapi.yaml -o openapi/docs.html",
     "check:env": "node scripts/check-env-example.mjs",
