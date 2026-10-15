@@ -21,7 +21,6 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - uses: pact-foundation/pact-cli@main
 
       - name: Start Pact Broker
         run: docker compose -f docker-compose.pact.yml up -d --wait
@@ -33,7 +32,7 @@ jobs:
         run: pnpm contract:publish "${PACT_BROKER_URL}"
 
       - name: Provider contract test
-        run: pnpm test:contract:provider "${PACT_BROKER_URL}"
+        run: pnpm test:contract:provider
 
-      - name: Provider verification
-        run: pnpm verify:provider "${PACT_BROKER_URL}"
+      - name: Can i deploy
+        run: pnpm contract:can-i-deploy "${PACT_BROKER_URL}"
