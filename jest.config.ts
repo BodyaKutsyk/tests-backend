@@ -25,6 +25,7 @@ const config: Config = {
       ...sharedConfig,
       displayName: 'integration',
       testMatch: ['<rootDir>/**/*.integration-spec.ts'],
+      testTimeout: 60_000,
     },
     {
       ...sharedConfig,

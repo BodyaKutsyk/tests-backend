@@ -81,6 +81,7 @@
     "@nestjs/schematics": "^12.0.0",
     "@nestjs/testing": "^12.0.1",
     "@pact-foundation/pact": "^17.1.3",
+    "@pact-foundation/pact-cli": "^18.1.2",
     "@redocly/cli": "^2.49.0",
     "@testcontainers/postgresql": "^12.2.0",
     "@types/express": "^5.0.0",
