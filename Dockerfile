@@ -11,15 +11,16 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS prod-deps
+COPY tsconfig.json tsconfig.build.json ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base AS dev-deps
+COPY tsconfig.json tsconfig.build.json ./
 RUN pnpm i
 COPY .  .
 RUN pnpm build
 
 FROM base AS build
-COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm build
