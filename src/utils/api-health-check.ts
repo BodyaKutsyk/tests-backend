@@ -1,12 +1,8 @@
 import http from 'node:http';
-import { ConfigService } from '@nestjs/config';
-import { Env } from '../config/env.schema.js';
-
-const configService = new ConfigService<Env>();
 
 const options = {
   host: 'localhost',
-  port: configService.get('API_PORT'),
+  port: 3000,
   path: '/health',
   timeout: 3000,
 };

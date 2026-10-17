@@ -32,8 +32,6 @@ services:
         - action: sync+restart
           path: tsconfig.json
           target: /app/tsconfig.json
-    ports: !override
-      - "${API_PORT}:${API_PORT}"
   db_seed:
     image: api_dev
     container_name: db_seed
