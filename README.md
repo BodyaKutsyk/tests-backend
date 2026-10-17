@@ -341,6 +341,14 @@ Atomic UPDATE was chosen to improve query performance and avoid unnecessary expl
 The retry mechanism handles two PostgreSQL error codes: `40001` and `40P01`. 
 In both cases, PostgreSQL aborts the affected transaction, so the operation must be retried in a new transaction.
 
+With 2 workers `pnpm demo:workers`:
+```
+[worker-1 | 0.1s] did total operations: 12
+[worker-2 | 0.088s] did total operations: 8
+Attempts: 20
+Total retries: 6
+```
+
 ### Postgres Connection Pool `transaction` mode
 PgBouncer uses transaction mode to reuse database connections more efficiently. A client keeps the same PostgreSQL connection only during a transaction, and after COMMIT or ROLLBACK that connection returns to the pool. Because of this, session-level state is not reliable between transactions: regular SET, LISTEN, and session-level prepared statements may not work as expected across different transactions. SET LOCAL is safe because it only applies inside the current transaction.
 
