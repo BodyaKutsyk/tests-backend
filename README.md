@@ -190,6 +190,8 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 | `PACT_BROKER_PORT`        | Port exposed by the Pact Broker service                                          |
 | `RABBITMQ_USER`           | Username used to authenticate with RabbitMQ                                      |
 | `RABBITMQ_PASSWORD`       | Password used to authenticate with RabbitMQ                                      |
+| `RABBITMQ_PORT`           | Port used to connect to the RabbitMQ                                             |
+| `RABBITMQ_HOST`           | Host used to connect to the RabbitMQ                                             |
 
 ### How to start
 
@@ -352,5 +354,7 @@ WebSocket provides low-latency, duplex communication, allowing both the client a
 
 SSE provides one-way communication from the server to the client. This approach is simpler and can be more lightweight for server-to-client updates, as it uses standard HTTP and does not require additional client-side libraries in browsers. Automatic reconnection is supported out of the box through the native browser EventSource API.
 
+### RabbitmQ Prefetch
+The default prefetch count for the `GenerationJob` consumer is set to 4, considering the 30-minute consumer timeout and the fact that generating a single test can take up to 7 minutes. This ensures that all prefetched jobs can be processed within the timeout window.
 
 

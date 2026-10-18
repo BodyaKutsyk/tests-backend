@@ -135,8 +135,9 @@ services:
   rabbitmq:
     image: rabbitmq:4.2.9-management
     container_name: rabbitmq
+    hostname: ${RABBITMQ_HOST}
     ports:
-      - "5672:5672"
+      - "${RABBITMQ_PORT}:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
