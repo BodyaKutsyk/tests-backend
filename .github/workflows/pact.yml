@@ -11,6 +11,10 @@ jobs:
       PACT_BROKER_DB_NAME: pact
       PACT_BROKER_URL: http://localhost:9292
       API_PORT: 3000
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: pact
+      RABBITMQ_PASSWORD: pact
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
