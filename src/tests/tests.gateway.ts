@@ -20,21 +20,6 @@ export class TestsGateway
   handleConnection(client: Socket) {
     const testJobId = client.handshake.auth.testJobId;
     client.join(testJobId);
-
-    let intervalId = setInterval(() => {
-      this.events.publish({
-        status: GenerationJobStatus.Parsing,
-        id: testJobId,
-      });
-    }, 1000);
-
-    setTimeout(() => {
-      clearInterval(intervalId);
-      this.events.publish({
-        status: GenerationJobStatus.Done,
-        id: testJobId,
-      });
-    }, 5000);
   }
   afterInit(client: Socket) {
     this.subscription = this.events.published$.subscribe(({ id, event }) => {

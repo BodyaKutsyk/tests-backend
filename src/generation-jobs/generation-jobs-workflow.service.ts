@@ -7,23 +7,12 @@ import {
 import { Repository } from 'typeorm';
 import { clearInterval } from 'node:timers';
 import { GenerationJobsEventService } from './generation-jobs-event.service.js';
-
-function promoteJobStatus(status: GenerationJobStatus): GenerationJobStatus {
-  if (
-    status === GenerationJobStatus.Done ||
-    status === GenerationJobStatus.Failed
-  ) {
-    return status;
-  }
-
-  const values = Object.values(GenerationJobStatus);
-
-  return values[values.indexOf(status) + 1];
-}
+import { TestsParserWorkerService } from './workers/tests-parser-worker.service.js';
+import { TestsGeneratorWorkerService } from './workers/tests-generator-worker.service.js';
 
 @Injectable()
-export class GenerationJobsWorkerService implements OnModuleDestroy {
-  private readonly logger = new Logger(GenerationJobsWorkerService.name);
+export class GenerationJobsWorkflowService implements OnModuleDestroy {
+  private readonly logger = new Logger(GenerationJobsWorkflowService.name);
 
   private readonly intervals = new Map<
     string,
@@ -38,10 +27,27 @@ export class GenerationJobsWorkerService implements OnModuleDestroy {
     @InjectRepository(GenerationJob)
     private readonly generationJobRepo: Repository<GenerationJob>,
     private readonly eventsService: GenerationJobsEventService,
+    private readonly parserWorker: TestsParserWorkerService,
+    private readonly generatorWorker: TestsGeneratorWorkerService,
   ) {}
 
-  process(jobId: string): void {
+  async process(jobId: string): Promise<void> {
     if (this.stopping || this.intervals.has(jobId)) return;
+
+    const result = await this.generationJobRepo
+      .createQueryBuilder()
+      .update(GenerationJob)
+      .set({ status: GenerationJobStatus.Parsing })
+      .where('id = :id', { id: jobId })
+      .andWhere('status = :status', {
+        status: GenerationJobStatus.Queued,
+      })
+      .returning('id')
+      .execute();
+
+    if (result.affected === 0) {
+      return;
+    }
 
     const intervalId = setInterval(() => {
       if (this.stopping || this.processing.has(jobId)) return;
@@ -65,16 +71,31 @@ export class GenerationJobsWorkerService implements OnModuleDestroy {
   }
 
   private async tick(jobId: string): Promise<void> {
-    const job = await this.generationJobRepo.findOneByOrFail({
+    let job = await this.generationJobRepo.findOneByOrFail({
       id: jobId,
     });
+    this.eventsService.publish({
+      id: jobId,
+      status: job.status,
+    });
 
-    if (this.stopping || this.isFinished(job.status)) {
+    const isFinished = this.isFinished(job.status);
+
+    if (this.stopping || isFinished) {
       this.stop(jobId);
       return;
     }
 
-    job.status = promoteJobStatus(job.status);
+    switch (job.status) {
+      case GenerationJobStatus.Queued:
+        job = await this.parserWorker.parse(job.id);
+        break;
+      case GenerationJobStatus.Parsing:
+        job = await this.generatorWorker.generate(jobId);
+        break;
+      case GenerationJobStatus.Generating:
+        job.status = GenerationJobStatus.Done;
+    }
 
     await this.generationJobRepo.save(job);
 
