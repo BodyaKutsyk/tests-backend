@@ -74,16 +74,14 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     let job = await this.generationJobRepo.findOneByOrFail({
       id: jobId,
     });
+    this.eventsService.publish({
+      id: jobId,
+      status: job.status,
+    });
 
     const isFinished = this.isFinished(job.status);
 
     if (this.stopping || isFinished) {
-      if (isFinished)
-        this.eventsService.publish({
-          id: jobId,
-          status: job.status,
-        });
-
       this.stop(jobId);
       return;
     }

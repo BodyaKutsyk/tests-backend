@@ -20,6 +20,10 @@ import { GenerationJobsTopologyService } from './generation-jobs-topology.servic
     TestsGeneratorWorkerService,
     TestsParserWorkerService,
   ],
-  exports: [GenerationJobsEventService, GenerationJobsWorkflowService],
+  exports: [
+    GenerationJobsEventService,
+    GenerationJobsWorkflowService,
+    GenerationJobsConsumer,
+  ],
 })
 export class GenerationJobModule {}

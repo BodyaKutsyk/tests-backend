@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
@@ -7,6 +8,7 @@ import {
 import { ChannelModel, ConfirmChannel, connect } from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env.schema.js';
+import fs from 'node:fs';
 
 interface PublishProps<T> {
   exchange: string;
@@ -20,10 +22,16 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
   private channel?: ConfirmChannel;
   private readonly logger = new Logger(RabbitMqService.name);
 
-  constructor(private readonly configService: ConfigService<Env, true>) {}
+  constructor(
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<Env, true>,
+  ) {}
 
   async onModuleInit() {
-    const host = this.configService.get('RABBITMQ_HOST');
+    const isDocker = fs.existsSync('/.dockerenv');
+    const host = isDocker
+      ? this.configService.get('RABBITMQ_HOST')
+      : '127.0.0.1';
     const port = this.configService.get('RABBITMQ_PORT');
     const user = this.configService.get('RABBITMQ_USER');
     const password = this.configService.get('RABBITMQ_PASSWORD');
@@ -65,11 +73,12 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
         exchange,
         routingKey,
         content,
-        { persistent: true },
+        { persistent: true, mandatory: true },
         (error) => {
           if (error) {
             rej(error);
           } else {
+            this.logger.log(`Published: ${routingKey}`);
             res();
           }
         },

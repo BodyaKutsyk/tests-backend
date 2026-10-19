@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
 import { Channel } from 'amqplib';
 import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
@@ -6,13 +6,20 @@ import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { GenerationJobsWorkflowService } from './generation-jobs-workflow.service.js';
 import { GenerationJobStatus } from '../entities/generation-job.js';
+import { Subject } from 'rxjs';
 
 @Injectable()
 export class GenerationJobsConsumer implements OnApplicationBootstrap {
   private channel: Channel;
+  private readonly deliveriesSubject = new Subject<GenerationJobCreatedEvent>();
+  readonly deliveries$ = this.deliveriesSubject.asObservable();
+
   constructor(
+    @Inject(RabbitMqService)
     private readonly rabbitMQService: RabbitMqService,
+    @Inject(GenerationJobsTopologyService)
     private readonly topology: GenerationJobsTopologyService,
+    @Inject(GenerationJobsWorkflowService)
     private readonly workflow: GenerationJobsWorkflowService,
   ) {}
 
@@ -34,6 +41,7 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
         const response: GenerationJobCreatedEvent = JSON.parse(
           data.content.toString(),
         );
+        this.deliveriesSubject.next(response);
 
         if (response.status === GenerationJobStatus.Done) {
           this.channel.ack(data);
