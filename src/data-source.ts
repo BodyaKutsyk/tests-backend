@@ -6,13 +6,12 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 const filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(filename);
-const isDocker = fs.existsSync('/.dockerenv');
 
 export const entitiesPath = join(__dirname, 'entities/**/*{.js,.ts}');
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: isDocker ? process.env.POSTGRES_HOST : '127.0.0.1',
+  host: process.env.POSTGRES_HOST,
   port: Number(process.env.POSTGRES_PORT ?? 5432),
   username: process.env.POSTGRES_ADMIN,
   password: process.env.POSTGRES_ADMIN_PASSWORD,
