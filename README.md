@@ -337,16 +337,52 @@ The application uses `RESTRICT` for relations referencing the `User` entity to p
 
 ### Concurrency
 
-Atomic UPDATE was chosen to improve query performance and avoid unnecessary explicit row locking.
-The retry mechanism handles two PostgreSQL error codes: `40001` and `40P01`. 
-In both cases, PostgreSQL aborts the affected transaction, so the operation must be retried in a new transaction.
+#### 1. Atomic UPDATE vs Race Conditions (`pnpm demo:race`)
+An atomic `UPDATE` with a conditional clause (`WHERE "used" + :amount <= "max_limit"`) was chosen to manage quota usage. This approach avoids unnecessary explicit row locking while preventing race conditions.
 
-With 2 workers `pnpm demo:workers`:
+When running 50 concurrent transactions attempting to consume storage quota (max limit allows only 10 increments of 1024 bytes):
+- **Attempts:** 50
+- **Successful:** 10 (10 out of 50 succeeded)
+- **Failed:** 40 (rejected due to quota limit)
+- **Final quota used:** 10,240 / 10,240 (remaining: 0)
+- **Over limit rows:** 0 (the invariant `used <= max_limit` holds)
+
+```text
+Attempts: 50
+Successful: 10
+Failed: 40
+Final used: 10240
+Final remaining quota: 0
+Over limit rows: 0
+Race condition invariant passed
 ```
+
+#### 2. Job Queue with `SKIP LOCKED` (`pnpm demo:workers`)
+To process queued generation jobs concurrently without collisions, workers use `SELECT ... FOR UPDATE SKIP LOCKED`. This allows each worker to pick up the next available job immediately without waiting on locks held by other workers.
+
+Benchmark results processing a queue of 100 jobs (with 250ms processing time per job):
+- **1 worker (sequential):** ~27.5 s
+- **3 workers (concurrent with `SKIP LOCKED`):** **9.69 s**
+- **Processed more than once:** 0 (no duplicate processing)
+
+```text
+[9.69 s] Workers did total: 100 operations
+Processed more than once: 0
+```
+
+#### 3. Transaction Retry on Serialization Failure / Deadlock (`pnpm demo:retry`)
+The retry mechanism handles two transient PostgreSQL error codes: `40001` (`serialization_failure`) and `40P01` (`deadlock_detected`). In both cases, PostgreSQL automatically aborts the affected transaction, requiring the operation to be retried in a new transaction after a short backoff.
+
+Benchmark results with 2 concurrent workers updating quota under `SERIALIZABLE` isolation:
+- **Total operations / attempts:** 20
+- **Total retries:** 3 (handled error `40001` / `40P01` and succeeded on retry)
+- **Final result:** All operations completed without data corruption or quota violations.
+
+```text
 [worker-1 | 0.1s] did total operations: 12
 [worker-2 | 0.088s] did total operations: 8
 Attempts: 20
-Total retries: 6
+Total retries: 3
 ```
 
 ### Postgres Connection Pool `transaction` mode
