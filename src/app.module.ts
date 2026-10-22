@@ -16,6 +16,7 @@ import { DocumentsModule } from './documents/documents.module.js';
 import { QuotasModule } from './quotas/quotas.module.js';
 import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
+import { OutboxModule } from './outbox/outbox.module.js';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
         };
       },
     }),
+    OutboxModule,
     RabbitMqModule,
     UsersModule,
     GenerationJobModule,

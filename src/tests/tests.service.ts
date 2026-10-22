@@ -5,10 +5,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Test } from '../entities/test.js';
 import { CreateTestDto, UpdateTestDto } from './types/tests-request.dto.js';
 import { CreateTestResponseDto } from './types/tests-response.dto.js';
-import { TestsPublisher } from './tests.publisher.js';
+import { TestsJobCreatedPayload, TestsPublisher } from './tests.publisher.js';
+import { OutboxSavePayload, OutboxService } from '../outbox/outbox.service.js';
+import { GENERATION_JOBS_EXCHANGE } from '../contracts/generation/constants.js';
+import { randomUUID } from 'crypto';
 
 // will be replaced with JWT
-let userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845';
+let userId = '2d86a24b-68f2-4554-a17a-3300e4047112';
+
+interface GenerationJobOutboxPayload {}
 
 @Injectable()
 export class TestsService {
@@ -18,11 +23,12 @@ export class TestsService {
     @InjectRepository(GenerationJob)
     private readonly testsRepo: Repository<Test>,
     private readonly testsPublisher: TestsPublisher,
+    private readonly outboxService: OutboxService,
   ) {}
 
   async create(
     { files, questionType, questionCount }: CreateTestDto,
-    userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845',
+    userId = '2d86a24b-68f2-4554-a17a-3300e4047112',
   ): Promise<CreateTestResponseDto> {
     const documents = [...new Set(files)].map((id) => ({ id }));
     const generationJobPayload = this.generationJobsRepo.create({
@@ -31,10 +37,36 @@ export class TestsService {
       questionType,
       documents,
     });
+    const generationJob = await this.generationJobsRepo.manager.transaction(
+      async (manager) => {
+        const generationJob = await manager.save(
+          GenerationJob,
+          generationJobPayload,
+        );
 
-    const generationJob =
-      await this.generationJobsRepo.save(generationJobPayload);
-    await this.testsPublisher.testJobCreated(generationJob.id);
+        const occurredAt = new Date();
+        // TODO: save in Redis
+        const eventId = randomUUID();
+        const outboxPayload: OutboxSavePayload<TestsJobCreatedPayload> = {
+          type: this.constructor.name,
+          aggregateType: GENERATION_JOBS_EXCHANGE,
+          aggregateId: generationJob.id,
+          payload: {
+            id: generationJob.id,
+            eventId,
+            occurredAt,
+          },
+        };
+        await this.outboxService.save<TestsJobCreatedPayload>(
+          outboxPayload,
+          manager,
+        );
+
+        return generationJob;
+      },
+    );
+
+    // await this.testsPublisher.testJobCreated(generationJob.id);
 
     return {
       id: generationJob.id,
