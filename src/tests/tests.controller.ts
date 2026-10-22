@@ -28,8 +28,9 @@ export class TestsController {
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   async create(
-    @Body() { userId, ...createTestDto }: CreateTestDto,
+    @Body() createTestDto: CreateTestDto,
     @Res({ passthrough: true }) res: Response,
+    @Headers('user-id') userId: string,
   ): Promise<CreateTestResponseDto> {
     const job = await this.testsService.create(createTestDto, userId);
 
@@ -50,6 +51,6 @@ export class TestsController {
     id: string,
     @Headers('last-event-id') lastEventId?: string,
   ): Promise<Observable<MessageEvent>> {
-    return this.generationJobEventService.stream(id);
+    return this.generationJobEventService.stream(id, lastEventId);
   }
 }

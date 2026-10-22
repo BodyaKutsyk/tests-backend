@@ -10,9 +10,6 @@ import { OutboxSavePayload, OutboxService } from '../outbox/outbox.service.js';
 import { GENERATION_JOBS_EXCHANGE } from '../contracts/generation/constants.js';
 import { randomUUID } from 'crypto';
 
-// will be replaced with JWT
-let userId = '2d86a24b-68f2-4554-a17a-3300e4047112';
-
 interface GenerationJobOutboxPayload {}
 
 @Injectable()
@@ -28,7 +25,7 @@ export class TestsService {
 
   async create(
     { files, questionType, questionCount }: CreateTestDto,
-    userId = '2d86a24b-68f2-4554-a17a-3300e4047112',
+    userId: string,
   ): Promise<CreateTestResponseDto> {
     const documents = [...new Set(files)].map((id) => ({ id }));
     const generationJobPayload = this.generationJobsRepo.create({
