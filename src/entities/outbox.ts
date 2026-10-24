@@ -26,7 +26,7 @@ export class Outbox extends Base {
   exchange: string;
 
   @Column({ type: 'jsonb' })
-  payload: string;
+  payload: object;
 
   @Column({ type: 'timestamptz', nullable: true })
   publishedAt: Date | null = null;

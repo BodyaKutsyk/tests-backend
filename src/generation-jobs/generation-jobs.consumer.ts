@@ -5,7 +5,6 @@ import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
 import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { GenerationJobsWorkflowService } from './generation-jobs-workflow.service.js';
-import { GenerationJobStatus } from '../entities/generation-job.js';
 import { Subject } from 'rxjs';
 
 @Injectable()
@@ -38,15 +37,16 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
           return;
         }
 
-        const response: GenerationJobCreatedEvent = JSON.parse(
-          data.content.toString(),
-        );
-        this.deliveriesSubject.next(response);
-
-        if (response.status === GenerationJobStatus.Done) {
+        try {
+          const event: GenerationJobCreatedEvent = JSON.parse(
+            data.content.toString(),
+          );
+          await this.workflow.process(event.id);
+          this.deliveriesSubject.next(event);
           this.channel.ack(data);
+        } catch {
+          this.channel.nack(data, false, false);
         }
-        await this.workflow.process(response.id);
       },
       { noAck: false },
     );

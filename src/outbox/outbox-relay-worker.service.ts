@@ -49,8 +49,6 @@ export class OutboxRelayWorkerService implements OnApplicationBootstrap {
         return;
       }
 
-      this.logger.log(pendingJobs.length);
-
       const promises = pendingJobs.map((job) => this.publish(job));
       const results = await Promise.allSettled(promises);
       const successIds: string[] = [];

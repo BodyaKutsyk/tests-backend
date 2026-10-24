@@ -17,23 +17,10 @@ export class OutboxService {
     @InjectRepository(Outbox)
     private readonly outboxRepository: Repository<Outbox>,
   ) {}
-  async save<T>(
-    {
-      aggregateType,
-      aggregateId,
-      type,
-      payload,
-      exchange,
-    }: OutboxSavePayload<T>,
+  async save<T extends object>(
+    data: OutboxSavePayload<T>,
     manager: EntityManager,
   ) {
-    const json = JSON.stringify(payload);
-    await manager.insert(this.outboxRepository.target, {
-      aggregateType,
-      aggregateId,
-      exchange,
-      type,
-      payload: json,
-    });
+    await manager.insert(this.outboxRepository.target, data);
   }
 }
