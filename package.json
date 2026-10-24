@@ -45,6 +45,9 @@
     "demo:race": "pnpm infisical pnpm exec tsx src/race-transaction.ts",
     "demo:workers": "pnpm infisical pnpm exec tsx src/workers-transactions.ts",
     "demo:retry": "pnpm infisical pnpm exec tsx src/retry-transaction.ts",
+    "demo:outbox": "pnpm infisical pnpm exec tsx scripts/demo/22/outbox.ts",
+    "demo:crash-write": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-write.ts",
+    "demo:crash-relay": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-relay.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {

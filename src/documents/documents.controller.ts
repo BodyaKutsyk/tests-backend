@@ -7,6 +7,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   ParseFilePipeBuilder,
+  Headers,
 } from '@nestjs/common';
 import { DocumentsService } from './documents.service.js';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -33,8 +34,9 @@ export class DocumentsController {
         .build(),
     )
     files: Express.Multer.File[],
+    @Headers('user-id') userId: string,
   ): Promise<UploadFilesResponseDto> {
-    return this.filesService.upload(files);
+    return this.filesService.upload(files, userId);
   }
 
   @Get()
