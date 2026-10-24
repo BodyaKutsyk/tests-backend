@@ -5,12 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Test } from '../entities/test.js';
 import { CreateTestDto, UpdateTestDto } from './types/tests-request.dto.js';
 import { CreateTestResponseDto } from './types/tests-response.dto.js';
-import { TestsJobCreatedPayload, TestsPublisher } from './tests.publisher.js';
-import { OutboxSavePayload, OutboxService } from '../outbox/outbox.service.js';
-import { GENERATION_JOBS_EXCHANGE } from '../contracts/generation/constants.js';
-import { randomUUID } from 'crypto';
-
-interface GenerationJobOutboxPayload {}
+import { TestsPublisher } from './tests.publisher.js';
 
 @Injectable()
 export class TestsService {
@@ -20,7 +15,6 @@ export class TestsService {
     @InjectRepository(GenerationJob)
     private readonly testsRepo: Repository<Test>,
     private readonly testsPublisher: TestsPublisher,
-    private readonly outboxService: OutboxService,
   ) {}
 
   async create(
@@ -40,30 +34,11 @@ export class TestsService {
           GenerationJob,
           generationJobPayload,
         );
-
-        const occurredAt = new Date();
-        // TODO: save in Redis
-        const eventId = randomUUID();
-        const outboxPayload: OutboxSavePayload<TestsJobCreatedPayload> = {
-          type: this.constructor.name,
-          aggregateType: GENERATION_JOBS_EXCHANGE,
-          aggregateId: generationJob.id,
-          payload: {
-            id: generationJob.id,
-            eventId,
-            occurredAt,
-          },
-        };
-        await this.outboxService.save<TestsJobCreatedPayload>(
-          outboxPayload,
-          manager,
-        );
+        await this.testsPublisher.testJobCreated(generationJob, manager);
 
         return generationJob;
       },
     );
-
-    // await this.testsPublisher.testJobCreated(generationJob.id);
 
     return {
       id: generationJob.id,

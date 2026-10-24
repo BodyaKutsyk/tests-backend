@@ -1,11 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
-import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
-import { GenerationJobStatus } from '../entities/generation-job.js';
+import { Injectable } from '@nestjs/common';
+import { GenerationJob } from '../entities/generation-job.js';
 import {
   GENERATION_JOBS_EXCHANGE,
   GENERATION_JOBS_ROUTING_KEYS,
 } from '../contracts/generation/constants.js';
+import { OutboxSavePayload, OutboxService } from '../outbox/outbox.service.js';
+import { randomUUID } from 'crypto';
+import { EntityManager } from 'typeorm';
 
 export interface TestsJobCreatedPayload {
   id: string;
@@ -15,20 +16,25 @@ export interface TestsJobCreatedPayload {
 
 @Injectable()
 export class TestsPublisher {
-  constructor(
-    @Inject(RabbitMqService)
-    private readonly rabbitMQService: RabbitMqService,
-  ) {}
-  async testJobCreated({ id, occurredAt, eventId }: TestsJobCreatedPayload) {
-    await this.rabbitMQService.publish<GenerationJobCreatedEvent>({
+  constructor(private readonly outboxService: OutboxService) {}
+  async testJobCreated(generationJob: GenerationJob, manager: EntityManager) {
+    const occurredAt = new Date();
+    // TODO: save in Redis
+    const eventId = randomUUID();
+    const outboxPayload: OutboxSavePayload<TestsJobCreatedPayload> = {
       exchange: GENERATION_JOBS_EXCHANGE,
-      routingKey: GENERATION_JOBS_ROUTING_KEYS.CREATED,
+      type: GENERATION_JOBS_ROUTING_KEYS.CREATED,
+      aggregateType: this.constructor.name,
+      aggregateId: generationJob.id,
       payload: {
-        id,
-        occurredAt,
+        id: generationJob.id,
         eventId,
-        status: GenerationJobStatus.Done,
+        occurredAt,
       },
-    });
+    };
+    await this.outboxService.save<TestsJobCreatedPayload>(
+      outboxPayload,
+      manager,
+    );
   }
 }
