@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Outbox } from '../entities/outbox.js';
 import { Repository, IsNull, EntityManager } from 'typeorm';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
+import { GenerationJob } from '../entities/generation-job.js';
 
 const RELAY_WORKER_INTERVAL = 1500;
 const JOBS_PER_CALL = 20;
@@ -44,6 +45,8 @@ export class OutboxRelayWorkerService implements OnApplicationBootstrap {
   async processJobs(limit: number) {
     await this.outboxRepository.manager.transaction(async (manager) => {
       const pendingJobs = await this.getPending(limit, manager);
+      pendingJobs.forEach((job) => job.attempts++);
+      await manager.getRepository(Outbox).save(pendingJobs);
 
       if (!pendingJobs.length) {
         return;

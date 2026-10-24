@@ -18,6 +18,7 @@ import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
 import { AuthInterceptor } from './interceptors/auth.interceptor.js';
+import { InboxModule } from './inbox/inbox.module.js';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AuthInterceptor } from './interceptors/auth.interceptor.js';
       },
     }),
     OutboxModule,
+    InboxModule,
     RabbitMqModule,
     UsersModule,
     GenerationJobModule,

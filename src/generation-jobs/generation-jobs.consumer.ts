@@ -1,4 +1,9 @@
-import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
 import { Channel } from 'amqplib';
 import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
@@ -6,12 +11,17 @@ import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { GenerationJobsWorkflowService } from './generation-jobs-workflow.service.js';
 import { Subject } from 'rxjs';
+import { InboxService } from '../inbox/inbox.service.js';
+import { InjectRepository } from '@nestjs/typeorm';
+import { GenerationJob } from '../entities/generation-job.js';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class GenerationJobsConsumer implements OnApplicationBootstrap {
   private channel: Channel;
   private readonly deliveriesSubject = new Subject<GenerationJobCreatedEvent>();
   readonly deliveries$ = this.deliveriesSubject.asObservable();
+  private readonly logger = new Logger(this.constructor.name);
 
   constructor(
     @Inject(RabbitMqService)
@@ -20,6 +30,9 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
     private readonly topology: GenerationJobsTopologyService,
     @Inject(GenerationJobsWorkflowService)
     private readonly workflow: GenerationJobsWorkflowService,
+    private readonly inboxService: InboxService,
+    @InjectRepository(GenerationJob)
+    private readonly generationJobRepository: Repository<GenerationJob>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -38,10 +51,25 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
         }
 
         try {
+          const manager = this.generationJobRepository.manager;
           const event: GenerationJobCreatedEvent = JSON.parse(
             data.content.toString(),
           );
-          await this.workflow.process(event.id);
+          await manager.transaction(async () => {
+            const inbox = await this.inboxService.save(
+              {
+                messageId: event.id,
+                consumer: this.constructor.name,
+              },
+              manager,
+            );
+
+            if (inbox.raw.length === 0) {
+              this.logger.log(`Recieved duplicated task with id #${event.id}`);
+              return;
+            }
+            await this.workflow.process(event.id, manager);
+          });
           this.deliveriesSubject.next(event);
           this.channel.ack(data);
         } catch {

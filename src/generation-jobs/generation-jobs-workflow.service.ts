@@ -4,7 +4,7 @@ import {
   GenerationJob,
   GenerationJobStatus,
 } from '../entities/generation-job.js';
-import { Repository } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { clearInterval } from 'node:timers';
 import { GenerationJobsEventService } from './generation-jobs-event.service.js';
 import { TestsParserWorkerService } from './workers/tests-parser-worker.service.js';
@@ -25,16 +25,15 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
 
   constructor(
     @InjectRepository(GenerationJob)
-    private readonly generationJobRepo: Repository<GenerationJob>,
     private readonly eventsService: GenerationJobsEventService,
     private readonly parserWorker: TestsParserWorkerService,
     private readonly generatorWorker: TestsGeneratorWorkerService,
   ) {}
 
-  async process(jobId: string): Promise<void> {
+  async process(jobId: string, manager: EntityManager): Promise<void> {
     if (this.stopping || this.intervals.has(jobId)) return;
 
-    const result = await this.generationJobRepo
+    const result = await manager
       .createQueryBuilder()
       .update(GenerationJob)
       .set({ status: GenerationJobStatus.Parsing })
@@ -54,7 +53,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
 
       this.processing.add(jobId);
 
-      const task = this.tick(jobId)
+      const task = this.tick(jobId, manager)
         .catch((error) => {
           this.logger.error(error);
           this.stop(jobId);
@@ -70,8 +69,8 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     this.intervals.set(jobId, intervalId);
   }
 
-  private async tick(jobId: string): Promise<void> {
-    let job = await this.generationJobRepo.findOneByOrFail({
+  private async tick(jobId: string, manager: EntityManager): Promise<void> {
+    let job = await manager.getRepository(GenerationJob).findOneByOrFail({
       id: jobId,
     });
     this.eventsService.publish({
@@ -97,7 +96,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
         job.status = GenerationJobStatus.Done;
     }
 
-    await this.generationJobRepo.save(job);
+    await manager.getRepository(GenerationJob).save(job);
 
     this.eventsService.publish({
       id: jobId,
