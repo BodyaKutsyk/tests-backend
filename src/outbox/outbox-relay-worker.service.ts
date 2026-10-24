@@ -4,6 +4,7 @@ import { Outbox } from '../entities/outbox.js';
 import { Repository, IsNull, EntityManager } from 'typeorm';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
 import { GenerationJob } from '../entities/generation-job.js';
+import { BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE } from '../utils/demos.js';
 
 const RELAY_WORKER_INTERVAL = 1500;
 const JOBS_PER_CALL = 20;
@@ -44,8 +45,15 @@ export class OutboxRelayWorkerService implements OnApplicationBootstrap {
   }
   async processJobs(limit: number) {
     await this.outboxRepository.manager.transaction(async (manager) => {
+      let enableRelay = true;
       const pendingJobs = await this.getPending(limit, manager);
-      pendingJobs.forEach((job) => job.attempts++);
+      pendingJobs.forEach((job) => {
+        job.attempts++;
+
+        if (job.aggregateType === BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE) {
+          enableRelay = false;
+        }
+      });
       await manager.getRepository(Outbox).save(pendingJobs);
 
       if (!pendingJobs.length) {
@@ -68,13 +76,16 @@ export class OutboxRelayWorkerService implements OnApplicationBootstrap {
       });
       const publishedAt = new Date();
 
-      await manager
-        .createQueryBuilder()
-        .update(Outbox)
-        .set({ publishedAt })
-        .where('aggregate_id in (:...ids)', { ids: successIds })
-        .andWhere({})
-        .execute();
+      if (enableRelay) {
+        await manager
+          .createQueryBuilder()
+          .update(Outbox)
+          .set({ publishedAt })
+          .where('aggregate_id in (:...ids)', { ids: successIds })
+          .andWhere({})
+          .execute();
+      }
+
       this.logger.log(`Published successfully ${successIds.length} jobs`);
     });
   }

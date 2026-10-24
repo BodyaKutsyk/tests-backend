@@ -6,6 +6,7 @@ import { Test } from '../entities/test.js';
 import { CreateTestDto, UpdateTestDto } from './types/tests-request.dto.js';
 import { CreateTestResponseDto } from './types/tests-response.dto.js';
 import { TestsPublisher } from './tests.publisher.js';
+import { BRAKE_TRANSACTION_NUM } from '../utils/demos.js';
 
 @Injectable()
 export class TestsService {
@@ -35,6 +36,10 @@ export class TestsService {
           generationJobPayload,
         );
         await this.testsPublisher.testJobCreated(generationJob, manager);
+
+        if (generationJobPayload.questionCount === BRAKE_TRANSACTION_NUM) {
+          throw new Error('second demo boom');
+        }
 
         return generationJob;
       },

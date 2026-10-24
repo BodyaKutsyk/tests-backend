@@ -7,7 +7,9 @@ export class AuthInterceptor implements NestInterceptor {
     const http = context.switchToHttp();
     const request: Request = http.getRequest();
 
-    request.headers['user-id'] = '2d86a24b-68f2-4554-a17a-3300e4047112';
+    if (!request.headers['user-id']) {
+      request.headers['user-id'] = '2d86a24b-68f2-4554-a17a-3300e4047112';
+    }
 
     return next.handle();
   }

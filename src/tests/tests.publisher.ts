@@ -7,6 +7,10 @@ import {
 import { OutboxSavePayload, OutboxService } from '../outbox/outbox.service.js';
 import { randomUUID } from 'crypto';
 import { EntityManager } from 'typeorm';
+import {
+  BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE,
+  BRAKE_OUTBOX_RELAY_NUM,
+} from '../utils/demos.js';
 
 export interface TestsJobCreatedPayload {
   id: string;
@@ -24,7 +28,10 @@ export class TestsPublisher {
     const outboxPayload: OutboxSavePayload<TestsJobCreatedPayload> = {
       exchange: GENERATION_JOBS_EXCHANGE,
       type: GENERATION_JOBS_ROUTING_KEYS.CREATED,
-      aggregateType: this.constructor.name,
+      aggregateType:
+        generationJob.questionCount === BRAKE_OUTBOX_RELAY_NUM
+          ? BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE
+          : this.constructor.name,
       aggregateId: generationJob.id,
       payload: {
         id: generationJob.id,

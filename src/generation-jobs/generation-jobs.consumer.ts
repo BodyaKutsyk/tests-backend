@@ -15,6 +15,7 @@ import { InboxService } from '../inbox/inbox.service.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GenerationJob } from '../entities/generation-job.js';
 import { Repository } from 'typeorm';
+import { GENERATION_JOB_DELIVERIES_CHANNEL } from '../utils/demos.js';
 
 @Injectable()
 export class GenerationJobsConsumer implements OnApplicationBootstrap {
@@ -55,6 +56,14 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
           const event: GenerationJobCreatedEvent = JSON.parse(
             data.content.toString(),
           );
+          try {
+            await manager.query('SELECT pg_notify($1, $2)', [
+              GENERATION_JOB_DELIVERIES_CHANNEL,
+              data.content.toString(),
+            ]);
+          } catch (error) {
+            this.logger.warn('Could not report generation job delivery', error);
+          }
           await manager.transaction(async () => {
             const inbox = await this.inboxService.save(
               {
