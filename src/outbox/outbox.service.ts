@@ -6,6 +6,7 @@ import { Outbox } from '../entities/outbox.js';
 export interface OutboxSavePayload<T> {
   aggregateType: string;
   aggregateId: string;
+  exchange: string;
   type: string;
   payload: T;
 }
@@ -17,17 +18,22 @@ export class OutboxService {
     private readonly outboxRepository: Repository<Outbox>,
   ) {}
   async save<T>(
-    { aggregateType, aggregateId, type, payload }: OutboxSavePayload<T>,
+    {
+      aggregateType,
+      aggregateId,
+      type,
+      payload,
+      exchange,
+    }: OutboxSavePayload<T>,
     manager: EntityManager,
   ) {
     const json = JSON.stringify(payload);
-    await manager.save(
-      this.outboxRepository.create({
-        aggregateType,
-        aggregateId,
-        type,
-        payload: json,
-      }),
-    );
+    await manager.insert(this.outboxRepository.target, {
+      aggregateType,
+      aggregateId,
+      exchange,
+      type,
+      payload: json,
+    });
   }
 }

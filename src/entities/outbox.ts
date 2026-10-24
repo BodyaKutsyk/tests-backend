@@ -28,8 +28,8 @@ export class Outbox extends Base {
   @Column({ type: 'jsonb' })
   payload: string;
 
-  @Column({ type: 'timestamptz', nullable: true, default: null })
-  publishedAt: Date | null;
+  @Column({ type: 'timestamptz', nullable: true })
+  publishedAt: Date | null = null;
 
   @Column({ type: 'int', default: 0 })
   attempts: number;
