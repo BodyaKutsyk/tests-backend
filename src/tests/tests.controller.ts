@@ -19,6 +19,8 @@ import { Observable } from 'rxjs';
 import { GenerationJobsEventService } from '../generation-jobs/generation-jobs-event.service.js';
 import { RequireHeaders } from '../guards/required-headers/required-headers.decorator.js';
 
+const operations = new Map<string, CreateTestResponseDto>();
+
 @Controller('tests')
 export class TestsController {
   constructor(
@@ -37,8 +39,14 @@ export class TestsController {
   ): Promise<CreateTestResponseDto> {
     // TODO: persist state in Redis
     // const isExists = await this.idempotencyService.check(idempotencyKey)
+    const operation = operations.get(idempotencyKey);
+    if (operation) {
+      return operation;
+    }
+
     const job = await this.testsService.create(createTestDto, userId);
 
+    operations.set(idempotencyKey, job);
     res.setHeader('Location', `/generation-jobs/${job.id}`);
 
     return job;

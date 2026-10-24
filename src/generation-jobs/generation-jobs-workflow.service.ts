@@ -1,5 +1,4 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   GenerationJob,
   GenerationJobStatus,
@@ -24,7 +23,6 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
   private stopping = false;
 
   constructor(
-    @InjectRepository(GenerationJob)
     private readonly eventsService: GenerationJobsEventService,
     private readonly parserWorker: TestsParserWorkerService,
     private readonly generatorWorker: TestsGeneratorWorkerService,
