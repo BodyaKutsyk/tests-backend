@@ -6,6 +6,7 @@ import { GenerationJobStatus } from '../entities/generation-job.js';
 export type GenerationJobEvent = {
   id: number;
   event: JobEvent;
+  type: string;
 };
 
 @Injectable()
@@ -24,9 +25,10 @@ export class GenerationJobsEventService {
           event.status !== GenerationJobStatus.Failed,
         true,
       ),
-      map(({ id, event }) => ({
+      map(({ id, event, type }) => ({
         id: String(id),
         data: event,
+        type,
       })),
     );
   }
@@ -34,6 +36,7 @@ export class GenerationJobsEventService {
     this.events$.next({
       id: ++this.lastId,
       event,
+      type: '',
     });
   }
 }

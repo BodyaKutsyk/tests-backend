@@ -414,9 +414,15 @@ PgBouncer uses transaction mode to reuse database connections more efficiently. 
 ## Trade-offs
 
 ### WebSocket vs SSE
-WebSocket provides low-latency, duplex communication, allowing both the client and server to send messages independently. However, when using the native WebSocket API, the client needs to handle reconnection, implement cursor-based event recovery, and manage other reliability features manually.
 
-SSE provides one-way communication from the server to the client. This approach is simpler and can be more lightweight for server-to-client updates, as it uses standard HTTP and does not require additional client-side libraries in browsers. Automatic reconnection is supported out of the box through the native browser EventSource API.
+SSE sends updates from the server to the client and reconnects automatically. WebSocket supports messages in both directions. SSE fits status updates; WebSocket fits two-way communication.
 
+With two or more API instances, events kept in memory are not shared. A client connected to another instance may miss an update. Shared event delivery is needed for both SSE and WebSocket.
 
+Run the demo:
+
+```bash
+pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs
+pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs --same-room
+```
 

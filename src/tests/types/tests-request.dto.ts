@@ -3,6 +3,7 @@ import {
   ArrayNotEmpty,
   IsEnum,
   IsNumber,
+  IsOptional,
   IsUUID,
   Max,
   Min,
@@ -11,6 +12,8 @@ import { QuestionType } from '../../types/temporary.js';
 import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateTestDto {
+  @IsOptional()
+  @IsUUID('4')
   userId?: string;
 
   @IsNumber()

@@ -81,6 +81,7 @@ export class GenerationJobsWorkerService implements OnModuleDestroy {
     this.eventsService.publish({
       id: jobId,
       status: job.status,
+      type: 'job-status',
     });
 
     if (this.isFinished(job.status)) {
