@@ -21,7 +21,7 @@ services:
     environment:
       API_INTERNAL_PORT: ${API_INTERNAL_PORT}
       <<: *infisical-env
-      POSTGRES_HOST: db
+      POSTGRES_HOST: pg_bouncer
       INFISICAL_ENV: prod
 
     extra_hosts: *infisical-hosts
