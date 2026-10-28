@@ -167,6 +167,22 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 3. To test the project, use `pnpm test`
 4. To validate existing `openapi.yaml` specification use `pnpm openapi:lint`
 
+Run `pnpm test:integration` for repository tests and `pnpm test:e2e` for HTTP tests. Both suites start a disposable PostgreSQL container, so a working container runtime is required.
+
+### Pact contract tests
+
+Run the consumer test with `pnpm test:contract:consumer` and provider verification with `pnpm test:contract:provider`. The provider verification starts a disposable PostgreSQL container and seeds users for the `at least one user exists` state.
+
+After publishing the contract and verification result to the broker, check compatibility with `pnpm contract:can-i-deploy "$PACT_BROKER_URL"`.
+
+Run `pnpm test:integration` for repository tests and `pnpm test:e2e` for HTTP tests. Both suites start a disposable PostgreSQL container, so a working container runtime is required.
+
+### Pact contract tests
+
+Run the consumer test with `pnpm test:contract:consumer` and provider verification with `pnpm test:contract:provider`. The provider verification starts a disposable PostgreSQL container and seeds users for the `at least one user exists` state.
+
+After publishing the contract and verification result to the broker, check compatibility with `pnpm contract:can-i-deploy "$PACT_BROKER_URL"`.
+
 ---
 
 ## Configuration
@@ -184,6 +200,14 @@ POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
 POSTGRES_PORT            -> Connection port to the PostgreSQL
 POSTGRES_HOST            -> Host of the PostgreSQL
+PACT_BROKER_DB_NAME      -> Pact Broker PostgreSQL database name.
+PACT_BROKER_DB_USER      -> Pact Broker PostgreSQL user name.
+PACT_BROKER_DB_PASSWORD  -> Pact Broker PostgreSQL password.
+PACT_BROKER_PORT         -> Pact Broker service port.
+PACT_BROKER_DB_NAME      -> Pact Broker PostgreSQL database name.
+PACT_BROKER_DB_USER      -> Pact Broker PostgreSQL user name.
+PACT_BROKER_DB_PASSWORD  -> Pact Broker PostgreSQL password.
+PACT_BROKER_PORT         -> Pact Broker service port.
 
 ```
 

@@ -1,0 +1,43 @@
+services:
+  postgres:
+    container_name: pact_broker_db
+    image: postgres:17@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
+    healthcheck:
+      test: psql postgres --command "select 1" -U postgres
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${PACT_BROKER_DB_USER}
+      POSTGRES_PASSWORD: ${PACT_BROKER_DB_PASSWORD}
+      POSTGRES_DB: ${PACT_BROKER_DB_NAME}
+
+  pact-broker:
+    container_name: pact_broker
+    image: pactfoundation/pact-broker:3.0.0-pactbroker2.121.2@sha256:420341d4fbfb00a621c313f47e530ad75703f969bbc7520d0d72bc71bb53cef9
+    ports:
+      - "${PACT_BROKER_PORT}:9292"
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9292/diagnostic/status/heartbeat || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    environment:
+      PACT_BROKER_PORT: ${PACT_BROKER_PORT}
+      PACT_BROKER_DATABASE_URL: postgres://${PACT_BROKER_DB_USER}:${PACT_BROKER_DB_PASSWORD}@postgres/${PACT_BROKER_DB_NAME}
+      PACT_BROKER_LOG_LEVEL: INFO
+      PACT_BROKER_SQL_LOG_LEVEL: DEBUG
+      # PACT_BROKER_DATABASE_CONNECT_MAX_RETRIES is only needed for docker-compose
+      # because the database takes longer to start up than the puma process
+      # Should not be needed in production.
+      PACT_BROKER_DATABASE_CONNECT_MAX_RETRIES: '5'
+      # The list of allowed base URLs (not setting this makes the app vulnerable to cache poisoning)
+      # This list allows the app to be addressed from the host and from within another docker container correctly
+      # Nginx config below makes the app accessible on ports 443 and 80, while the Ruby application itself runs on port 9292
+      PACT_BROKER_BASE_URL: https://localhost http://localhost http://localhost:9292 http://pact-broker:9292
+        https://host.docker.internal http://host.docker.internal http://host.docker.internal:9292
+
+volumes:
+  postgres-volume:
