@@ -1,3 +1,4 @@
 allowBuilds:
+  '@pact-foundation/pact-core': true
   '@scarf/scarf': false
   esbuild: false
