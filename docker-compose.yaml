@@ -19,12 +19,14 @@ services:
       context: .
       target: prod
     environment:
+      API_PORT: ${API_PORT}
       <<: *infisical-env
       POSTGRES_HOST: pg_bouncer
       INFISICAL_ENV: prod
     extra_hosts: *infisical-hosts
     ports:
-      - "${API_PORT}:3000"
+      - "${API_PORT}:${API_PORT}"
+
     depends_on:
       pg_bouncer:
         condition: service_healthy
