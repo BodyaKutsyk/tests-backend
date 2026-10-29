@@ -28,7 +28,7 @@ export class TestsController {
     private readonly generationJobEventService: GenerationJobsEventService,
   ) {}
 
-  @RequireHeaders('X-Idempotency-Key')
+  @RequireHeaders('X-Idempotency-Key', 'user-id')
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   async create(

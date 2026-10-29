@@ -65,10 +65,10 @@ import { RequireHeaderGuard } from './guards/required-headers/required-headers.g
       provide: APP_FILTER,
       useClass: ProblemExceptionFilter,
     },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: AuthInterceptor,
-    },
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: AuthInterceptor,
+    // },
     {
       provide: APP_GUARD,
       useClass: RequireHeaderGuard,

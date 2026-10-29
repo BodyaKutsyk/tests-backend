@@ -62,6 +62,7 @@ describe('TestsController (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .post('/tests')
+      .set('user-id', user.id)
       .send({
         questionType: QuestionType.MultipleChoice,
         questionCount: 10,

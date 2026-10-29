@@ -64,20 +64,20 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
           } catch (error) {
             this.logger.warn('Could not report generation job delivery', error);
           }
-          await manager.transaction(async () => {
+          await manager.transaction(async (entityManager) => {
             const inbox = await this.inboxService.save(
               {
                 messageId: event.id,
                 consumer: this.constructor.name,
               },
-              manager,
+              entityManager,
             );
 
             if (inbox.raw.length === 0) {
               this.logger.log(`Recieved duplicated task with id #${event.id}`);
               return;
             }
-            await this.workflow.process(event.id, manager);
+            await this.workflow.process(event.id, entityManager);
           });
           this.deliveriesSubject.next(event);
           this.channel.ack(data);
