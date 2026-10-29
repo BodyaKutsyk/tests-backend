@@ -9,7 +9,7 @@ async function bootstrap() {
   const configService = app.get<ConfigService<Env, true>>(ConfigService);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   await app.listen(
-    configService.get<Env>('API_INTERNAL_PORT', { infer: true }),
+    configService.get<Env>('API_PORT', { infer: true }),
     '0.0.0.0',
   );
 }

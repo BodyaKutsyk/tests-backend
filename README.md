@@ -174,7 +174,7 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Environment variables
 
 ```text
-API_INTERNAL_PORT        -> Internal port used by the backend API inside the container.
+API_PORT                 -> Port used by the backend API inside the container.
 API_EXTERNAL_PORT        -> External host port mapped to the backend API.
 POSTGRES_DB              -> Name of the PostgreSQL database.
 POSTGRES_USER            -> PostgreSQL application user used by the backend.
