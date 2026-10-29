@@ -40,9 +40,9 @@ describe('Provider Verification', () => {
       provider: 'tests-api',
       pactBrokerUrl:
         process.env.PACT_BROKER_URL ??
-        `http://localhost:${process.env.PACT_BROKER_PORT}`,
+        `http://localhost:${process.env.PACT_BROKER_PORT ?? '9292'}`,
       providerBaseUrl,
-      publishVerificationResult: process.env.CI === 'true',
+      publishVerificationResult: true,
       providerVersion: '0.1',
       consumerVersionSelectors: [
         {

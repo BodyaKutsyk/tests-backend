@@ -162,26 +162,31 @@ Before starting the project, install the dependencies:
 If you made some changes in the `openapi/openapi.yaml` update docs HTML file via `pnpm openapi:build`.
 For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Testing
-1. Project uses jest library as test runner
-2. API contract testing is done via `pact@4`
-3. To test the project, use `pnpm test`
-4. To validate existing `openapi.yaml` specification use `pnpm openapi:lint`
-
-Run `pnpm test:integration` for repository tests and `pnpm test:e2e` for HTTP tests. Both suites start a disposable PostgreSQL container, so a working container runtime is required.
+The project uses Jest. Run `pnpm test` for unit tests, `pnpm test:integration` for repository tests, and `pnpm test:e2e` for HTTP tests. Integration, e2e, and provider tests use disposable PostgreSQL containers through Testcontainers to keep test data isolated from the development database.
 
 ### Pact contract tests
 
-Run the consumer test with `pnpm test:contract:consumer` and provider verification with `pnpm test:contract:provider`. The provider verification starts a disposable PostgreSQL container and seeds users for the `at least one user exists` state.
+Pact uses consumer-driven contracts: the consumer test records the frontend's expected API behavior, then the provider verifier checks the API against that contract. Provider verification seeds its disposable database for the declared provider state and publishes the verification result to the broker on every run. The broker stores contract versions separately from the disposable test database.
 
-After publishing the contract and verification result to the broker, check compatibility with `pnpm contract:can-i-deploy "$PACT_BROKER_URL"`.
+Start the broker and its PostgreSQL database:
 
-Run `pnpm test:integration` for repository tests and `pnpm test:e2e` for HTTP tests. Both suites start a disposable PostgreSQL container, so a working container runtime is required.
+```bash
+pnpm infisical docker compose -f docker-compose.pact.yml up -d --wait
+```
 
-### Pact contract tests
+Run the consumer contract test, publish the generated contract, and verify the provider:
 
-Run the consumer test with `pnpm test:contract:consumer` and provider verification with `pnpm test:contract:provider`. The provider verification starts a disposable PostgreSQL container and seeds users for the `at least one user exists` state.
+```bash
+export PACT_BROKER_URL="${PACT_BROKER_URL:-http://localhost:9292}"
+pnpm test:contract
+```
 
-After publishing the contract and verification result to the broker, check compatibility with `pnpm contract:can-i-deploy "$PACT_BROKER_URL"`.
+The provider verification result is published by `verify:provider`. Check deployability for both participants separately:
+
+```bash
+pnpm contract:can-i-deploy "$PACT_BROKER_URL"
+pnpm contract:can-i-deploy:provider "$PACT_BROKER_URL"
+```
 
 ---
 
@@ -190,8 +195,7 @@ After publishing the contract and verification result to the broker, check compa
 ### Environment variables
 
 ```text
-API_INTERNAL_PORT        -> Internal port used by the backend API inside the container.
-API_EXTERNAL_PORT        -> External host port mapped to the backend API.
+API_PORT                 -> Port used by the backend API.
 POSTGRES_DB              -> Name of the PostgreSQL database.
 POSTGRES_USER            -> PostgreSQL application user used by the backend.
 POSTGRES_USER_PASSWORD   -> Initial password for the PostgreSQL application user.
@@ -204,10 +208,7 @@ PACT_BROKER_DB_NAME      -> Pact Broker PostgreSQL database name.
 PACT_BROKER_DB_USER      -> Pact Broker PostgreSQL user name.
 PACT_BROKER_DB_PASSWORD  -> Pact Broker PostgreSQL password.
 PACT_BROKER_PORT         -> Pact Broker service port.
-PACT_BROKER_DB_NAME      -> Pact Broker PostgreSQL database name.
-PACT_BROKER_DB_USER      -> Pact Broker PostgreSQL user name.
-PACT_BROKER_DB_PASSWORD  -> Pact Broker PostgreSQL password.
-PACT_BROKER_PORT         -> Pact Broker service port.
+PACT_BROKER_URL          -> Pact Broker URL, default http://localhost:9292.
 
 ```
 
