@@ -83,10 +83,10 @@ async function raceTransaction() {
     const userRepo = dataSource.getRepository(User);
     const user = await userRepo.save(
       userRepo.create({
-        firstName: 'Test',
-        lastName: 'User',
+        first_name: 'Test',
+        last_name: 'User',
         email: `user-${id}@testing.com`,
-        passwordHash: '12345678',
+        password_hash: '12345678',
         quotas: [
           {
             maxLimit: MAX_LIMIT,

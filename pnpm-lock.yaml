@@ -50,6 +50,9 @@ importers:
       typeorm:
         specifier: ^1.1.1
         version: 1.1.1(pg@8.23.0)(supports-color@7.2.0)
+      typeorm-naming-strategies:
+        specifier: ^4.1.0
+        version: 4.1.0(typeorm@1.1.1(pg@8.23.0)(supports-color@7.2.0))
       zod:
         specifier: ^4.5.4
         version: 4.5.4
@@ -2312,6 +2315,11 @@ packages:
   typedarray@0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
 
+  typeorm-naming-strategies@4.1.0:
+    resolution: {integrity: sha512-vPekJXzZOTZrdDvTl1YoM+w+sUIfQHG4kZTpbFYoTsufyv9NIBRe4Q+PdzhEAFA2std3D9LZHEb1EjE9zhRpiQ==}
+    peerDependencies:
+      typeorm: ^0.2.0 || ^0.3.0
+
   typeorm@1.1.1:
     resolution: {integrity: sha512-og9mG4Lwlvj6MfvYd8yRCzXy73gETtwgTKQ/ISLYvEOpJPy4IrjU/89HK4ZAFmRIbEg1hkIk04v8phTrxfgPmQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.11.0}
@@ -4538,6 +4546,10 @@ snapshots:
       mime-types: 3.0.2
 
   typedarray@0.0.6: {}
+
+  typeorm-naming-strategies@4.1.0(typeorm@1.1.1(pg@8.23.0)(supports-color@7.2.0)):
+    dependencies:
+      typeorm: 1.1.1(pg@8.23.0)(supports-color@7.2.0)
 
   typeorm@1.1.1(pg@8.23.0)(supports-color@7.2.0):
     dependencies:
