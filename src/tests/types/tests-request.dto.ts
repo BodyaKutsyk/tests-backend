@@ -5,11 +5,14 @@ import {
   IsNumber,
   IsOptional,
   IsUUID,
-  Max,
-  Min,
+  ValidateBy,
 } from 'class-validator';
 import { QuestionType } from '../../types/temporary.js';
 import { PartialType } from '@nestjs/mapped-types';
+import {
+  BRAKE_OUTBOX_RELAY_NUM,
+  BRAKE_TRANSACTION_NUM,
+} from '../../utils/demos.js';
 
 export class CreateTestDto {
   @IsOptional()
@@ -17,8 +20,18 @@ export class CreateTestDto {
   userId?: string;
 
   @IsNumber()
-  @Min(1)
-  @Max(30)
+  @ValidateBy({
+    name: 'allowedQuestionCount',
+    validator: {
+      validate: (value: unknown) =>
+        typeof value === 'number' &&
+        ((value >= 1 && value <= 30) ||
+          value === BRAKE_TRANSACTION_NUM ||
+          value === BRAKE_OUTBOX_RELAY_NUM),
+      defaultMessage: () =>
+        'questionCount must be between 1 and 30 or a demo trigger value',
+    },
+  })
   questionCount: number;
 
   @IsEnum(QuestionType)

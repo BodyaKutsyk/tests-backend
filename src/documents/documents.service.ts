@@ -14,8 +14,6 @@ import {
 } from './types/document.dto.js';
 
 // will be replaced with JWT
-let userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845';
-
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -25,7 +23,10 @@ export class DocumentsService {
     private readonly quotaService: QuotasService,
   ) {}
 
-  async upload(files: Express.Multer.File[]): Promise<UploadFilesResponseDto> {
+  async upload(
+    files: Express.Multer.File[],
+    userId: string,
+  ): Promise<UploadFilesResponseDto> {
     const directory = join('uploads', userId);
     const totalFilesSize = files.reduce((prev, curr) => prev + curr.size, 0);
     await this.quotaService.reserveStorage(

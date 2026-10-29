@@ -3,6 +3,7 @@ set -eu
 
 psql \
   -v ON_ERROR_STOP=1 \
+  -v DBNAME="$POSTGRES_DB" \
   -v app_user="$POSTGRES_APP_USER" \
   -v app_password="$POSTGRES_APP_PASSWORD" \
   --username "$POSTGRES_USER" \

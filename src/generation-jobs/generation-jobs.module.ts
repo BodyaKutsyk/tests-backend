@@ -8,11 +8,16 @@ import { TestsParserWorkerService } from './workers/tests-parser-worker.service.
 import { GenerationJobsConsumer } from './generation-jobs.consumer.js';
 import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
+import { InboxModule } from '../inbox/inbox.module.js';
 import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js';
 import { GenerationJobsService } from './generation-jobs.service.js';
 
 @Module({
-  imports: [RabbitMqModule, TypeOrmModule.forFeature([GenerationJob])],
+  imports: [
+    RabbitMqModule,
+    InboxModule,
+    TypeOrmModule.forFeature([GenerationJob]),
+  ],
   controllers: [],
   providers: [
     GenerationJobsTopologyService,

@@ -6,9 +6,7 @@ import { Test } from '../entities/test.js';
 import { CreateTestDto, UpdateTestDto } from './types/tests-request.dto.js';
 import { CreateTestResponseDto } from './types/tests-response.dto.js';
 import { TestsPublisher } from './tests.publisher.js';
-
-// will be replaced with JWT
-let userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845';
+import { BRAKE_TRANSACTION_NUM } from '../utils/demos.js';
 
 @Injectable()
 export class TestsService {
@@ -22,7 +20,7 @@ export class TestsService {
 
   async create(
     { files, questionType, questionCount }: CreateTestDto,
-    userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845',
+    userId: string,
   ): Promise<CreateTestResponseDto> {
     const documents = [...new Set(files)].map((id) => ({ id }));
     const generationJobPayload = this.generationJobsRepo.create({
@@ -31,10 +29,21 @@ export class TestsService {
       questionType,
       documents,
     });
+    const generationJob = await this.generationJobsRepo.manager.transaction(
+      async (manager) => {
+        const generationJob = await manager.save(
+          GenerationJob,
+          generationJobPayload,
+        );
+        await this.testsPublisher.testJobCreated(generationJob, manager);
 
-    const generationJob =
-      await this.generationJobsRepo.save(generationJobPayload);
-    await this.testsPublisher.testJobCreated(generationJob.id);
+        if (generationJobPayload.questionCount === BRAKE_TRANSACTION_NUM) {
+          throw new Error('second demo boom');
+        }
+
+        return generationJob;
+      },
+    );
 
     return {
       id: generationJob.id,

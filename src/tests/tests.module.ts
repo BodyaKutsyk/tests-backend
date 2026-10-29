@@ -8,12 +8,14 @@ import { GenerationJobModule } from '../generation-jobs/generation-jobs.module.j
 import { TestsGateway } from './tests.gateway.js';
 import { TestsPublisher } from './tests.publisher.js';
 import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
+import { OutboxModule } from '../outbox/outbox.module.js';
 
 @Module({
   imports: [
     GenerationJobModule,
     TypeOrmModule.forFeature([GenerationJob, Test]),
     RabbitMqModule,
+    OutboxModule,
   ],
   controllers: [TestsController],
   providers: [TestsService, TestsGateway, TestsPublisher],
