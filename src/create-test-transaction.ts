@@ -248,8 +248,8 @@ export async function createTestTransaction(dataSource: DataSource) {
     }
     const generationJob = await generationJobRepo.save({
       user: { id: user.id },
-      questionCount: questions.length,
-      questionType: QuestionType.MultipleChoice,
+      question_count: questions.length,
+      question_type: QuestionType.MultipleChoice,
       status: JobStatus.Queued,
     });
 

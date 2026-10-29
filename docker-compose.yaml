@@ -22,7 +22,7 @@ services:
       target: prod
 
     environment:
-      API_INTERNAL_PORT: ${API_INTERNAL_PORT}
+      API_PORT: ${API_PORT}
       <<: *infisical-env
       POSTGRES_HOST: pg_bouncer
       INFISICAL_ENV: prod
@@ -30,7 +30,7 @@ services:
     extra_hosts: *infisical-hosts
 
     ports:
-      - "${API_EXTERNAL_PORT}:${API_INTERNAL_PORT}"
+      - "${API_PORT}:${API_PORT}"
 
     depends_on:
       db:

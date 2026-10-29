@@ -1,9 +1,10 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class GenerateDb1791199655518 implements MigrationInterface {
-    name = 'GenerateDb1791199655518'
+export class GenerateDb1790511039153 implements MigrationInterface {
+    name = 'GenerateDb1790511039153'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        const database = queryRunner.connection.options.database;
         await queryRunner.query(`CREATE TYPE "public"."evaluation_jobs_status_enum" AS ENUM('queued', 'evaluating', 'done', 'failed')`);
         await queryRunner.query(`CREATE TABLE "evaluation_jobs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "status" "public"."evaluation_jobs_status_enum" NOT NULL DEFAULT 'queued', "attempt_id" uuid NOT NULL, CONSTRAINT "REL_ed5eedc480674f5054a942b2ad" UNIQUE ("attempt_id"), CONSTRAINT "PK_25d723fd13ed62b277c1166f106" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "evaluations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "explanation" text, "is_correct" boolean NOT NULL DEFAULT false, "evaluation_job_id" uuid NOT NULL, "response_id" uuid NOT NULL, CONSTRAINT "REL_99e4357de2df3222e21f932d03" UNIQUE ("response_id"), CONSTRAINT "PK_f683b433eba0e6dae7e19b29e29" PRIMARY KEY ("id"))`);
@@ -20,7 +21,7 @@ export class GenerateDb1791199655518 implements MigrationInterface {
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_39967179cde6811a778b0849a8" ON "quotas"  ("user_id", "quota_type") `);
         await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, "email" character varying(254) NOT NULL, "first_name" character varying(100) NOT NULL, "last_name" character varying(100) NOT NULL, "password_hash" character varying(150) NOT NULL, CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_c9b5b525a96ddc2c5647d7f7fa" ON "users"  ("created_at") `);
-        await queryRunner.query(`INSERT INTO "typeorm_metadata"("database", "schema", "table", "type", "name", "value") VALUES ($1, $2, $3, $4, $5, $6)`, ["my_db","public","tests","GENERATED_COLUMN","search_vector","to_tsvector('simple', name || '')"]);
+        await queryRunner.query(`INSERT INTO "typeorm_metadata"("database", "schema", "table", "type", "name", "value") VALUES ($1, $2, $3, $4, $5, $6)`, [database,"public","tests","GENERATED_COLUMN","search_vector","to_tsvector('simple', name || '')"]);
         await queryRunner.query(`CREATE TABLE "tests" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, "name" character varying(255) NOT NULL, "search_vector" tsvector GENERATED ALWAYS AS (to_tsvector('simple', name || '')) STORED NOT NULL, "user_id" uuid NOT NULL, CONSTRAINT "PK_4301ca51edf839623386860aed2" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TYPE "public"."questions_question_type_enum" AS ENUM('open-ended', 'multiple-choice')`);
         await queryRunner.query(`CREATE TABLE "questions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "question_type" "public"."questions_question_type_enum" NOT NULL DEFAULT 'multiple-choice', "value" text NOT NULL, "test_id" uuid NOT NULL, CONSTRAINT "PK_08a6d4b0f49ff300bf3a0ca60ac" PRIMARY KEY ("id"))`);
@@ -53,6 +54,7 @@ export class GenerateDb1791199655518 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        const database = queryRunner.connection.options.database;
         await queryRunner.query(`ALTER TABLE "test_documents" DROP CONSTRAINT "FK_dfc97d7bfdfd194ff0dd614b5e7"`);
         await queryRunner.query(`ALTER TABLE "test_documents" DROP CONSTRAINT "FK_0c905ce2d8e04a51b34a9ca31df"`);
         await queryRunner.query(`ALTER TABLE "generation_job_documents" DROP CONSTRAINT "FK_12c3d2fad923a75427a4e0d9d54"`);
@@ -82,7 +84,7 @@ export class GenerateDb1791199655518 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "questions"`);
         await queryRunner.query(`DROP TYPE "public"."questions_question_type_enum"`);
         await queryRunner.query(`DROP TABLE "tests"`);
-        await queryRunner.query(`DELETE FROM "typeorm_metadata" WHERE "type" = $1 AND "name" = $2 AND "database" = $3 AND "schema" = $4 AND "table" = $5`, ["GENERATED_COLUMN","search_vector","my_db","public","tests"]);
+        await queryRunner.query(`DELETE FROM "typeorm_metadata" WHERE "type" = $1 AND "name" = $2 AND "database" = $3 AND "schema" = $4 AND "table" = $5`, ["GENERATED_COLUMN","search_vector",database,"public","tests"]);
         await queryRunner.query(`DROP INDEX "public"."IDX_c9b5b525a96ddc2c5647d7f7fa"`);
         await queryRunner.query(`DROP TABLE "users"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_39967179cde6811a778b0849a8"`);

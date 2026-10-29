@@ -327,10 +327,11 @@ SKIP_VAULT=1 pnpm infisical bash -c '
 ```
 
 `POSTGRES_HOST=127.0.0.1` overrides the Docker hostname because the demonstration runs directly on the host machine rather than inside a container.
+Pass a sample size to compare query counts for different N values, for example `pnpm demo:nplus1 200`. The default is 50.
 
 #### Results of n+1
 ```
-Selecting 50 users that have tests.
+Selecting up to 50 tests and users.
 Before fix: 51 queries
 After fix: 1 query
 ```
