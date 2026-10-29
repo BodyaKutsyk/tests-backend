@@ -43,10 +43,11 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
         );
         this.deliveriesSubject.next(response);
 
+        await this.workflow.process(response.id);
+
         if (response.status === GenerationJobStatus.Done) {
           this.channel.ack(data);
         }
-        await this.workflow.process(response.id);
       },
       { noAck: false },
     );

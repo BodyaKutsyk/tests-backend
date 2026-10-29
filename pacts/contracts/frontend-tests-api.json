@@ -6,6 +6,11 @@
     {
       "description": "a request to get users",
       "pending": false,
+      "providerStates": [
+        {
+          "name": "at least one user exists"
+        }
+      ],
       "request": {
         "method": "GET",
         "path": "/users",

@@ -30,25 +30,31 @@ describe('Provider Verification', () => {
       .useValue(dataSource)
       .compile();
 
-    await seedUsers(client, 10);
-
     app = moduleFixture.createNestApplication();
-    await app.listen(Number(process.env.API_PORT) || 3000, '127.0.0.1');
+    await app.listen(Number(process.env.API_PORT) + 1 || 3001, '127.0.0.1');
   }, 20_000);
 
   it('passes consumer expectations', async () => {
     const providerBaseUrl = await app.getUrl();
     const pact = new Verifier({
       provider: 'tests-api',
-      pactBrokerUrl: `http://localhost:${process.env.PACT_BROKER_PORT}`,
+      pactBrokerUrl:
+        process.env.PACT_BROKER_URL ??
+        `http://localhost:${process.env.PACT_BROKER_PORT ?? '9292'}`,
       providerBaseUrl,
-      publishVerificationResult: process.env.CI === 'true',
+      publishVerificationResult: true,
       providerVersion: '0.1',
       consumerVersionSelectors: [
         {
           latest: true,
         },
       ],
+      stateHandlers: {
+        'at least one user exists': async () => {
+          await client.query('TRUNCATE TABLE users CASCADE');
+          await seedUsers(client, 10);
+        },
+      },
     });
 
     return pact.verifyProvider();

@@ -8,6 +8,8 @@ import { TestsParserWorkerService } from './workers/tests-parser-worker.service.
 import { GenerationJobsConsumer } from './generation-jobs.consumer.js';
 import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
+import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js';
+import { GenerationJobsService } from './generation-jobs.service.js';
 
 @Module({
   imports: [RabbitMqModule, TypeOrmModule.forFeature([GenerationJob])],
@@ -19,11 +21,15 @@ import { GenerationJobsTopologyService } from './generation-jobs-topology.servic
     GenerationJobsWorkflowService,
     TestsGeneratorWorkerService,
     TestsParserWorkerService,
+    GenerationJobsWorkerService,
+    GenerationJobsService,
   ],
   exports: [
     GenerationJobsEventService,
     GenerationJobsWorkflowService,
     GenerationJobsConsumer,
+    GenerationJobsWorkerService,
+    GenerationJobsService,
   ],
 })
 export class GenerationJobModule {}

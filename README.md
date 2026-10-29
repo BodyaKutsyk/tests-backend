@@ -162,16 +162,38 @@ Before starting the project, install the dependencies:
 If you made some changes in the `openapi/openapi.yaml` update docs HTML file via `pnpm openapi:build`.
 For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Testing
-1. Project uses jest library as test runner
-2. API contract testing is done via `pact@4`
-3. To test the project, use `pnpm test`
-4. To validate existing `openapi.yaml` specification use `pnpm openapi:lint`
+The project uses Jest. Run `pnpm test` for unit tests, `pnpm test:integration` for repository tests, and `pnpm test:e2e` for HTTP tests. Integration, e2e, and provider tests use disposable PostgreSQL containers through Testcontainers to keep test data isolated from the development database.
+
+### Pact contract tests
+
+Pact uses consumer-driven contracts: the consumer test records the frontend's expected API behavior, then the provider verifier checks the API against that contract. Provider verification seeds its disposable database for the declared provider state and publishes the verification result to the broker on every run. The broker stores contract versions separately from the disposable test database.
+
+Start the broker and its PostgreSQL database:
+
+```bash
+pnpm infisical docker compose -f docker-compose.pact.yml up -d --wait
+```
+
+Run the consumer contract test, publish the generated contract, and verify the provider:
+
+```bash
+export PACT_BROKER_URL="${PACT_BROKER_URL:-http://localhost:9292}"
+pnpm test:contract
+```
+
+The provider verification result is published by `verify:provider`. Check deployability for both participants separately:
+
+```bash
+pnpm contract:can-i-deploy "$PACT_BROKER_URL"
+pnpm contract:can-i-deploy:provider "$PACT_BROKER_URL"
+```
 
 ---
 
 ## Configuration
 
 ### Environment variables
+
 
 | Key                       | Description                                                                      |
 | ------------------------- | -------------------------------------------------------------------------------- |
@@ -308,10 +330,11 @@ SKIP_VAULT=1 pnpm infisical bash -c '
 ```
 
 `POSTGRES_HOST=127.0.0.1` overrides the Docker hostname because the demonstration runs directly on the host machine rather than inside a container.
+Pass a sample size to compare query counts for different N values, for example `pnpm demo:nplus1 200`. The default is 50.
 
 #### Results of n+1
 ```
-Selecting 50 users that have tests.
+Selecting up to 50 tests and users.
 Before fix: 51 queries
 After fix: 1 query
 ```
@@ -340,9 +363,53 @@ The application uses `RESTRICT` for relations referencing the `User` entity to p
 
 ### Concurrency
 
-Atomic UPDATE was chosen to improve query performance and avoid unnecessary explicit row locking.
-The retry mechanism handles two PostgreSQL error codes: `40001` and `40P01`. 
-In both cases, PostgreSQL aborts the affected transaction, so the operation must be retried in a new transaction.
+#### 1. Atomic UPDATE vs Race Conditions (`pnpm demo:race`)
+An atomic `UPDATE` with a conditional clause (`WHERE "used" + :amount <= "max_limit"`) was chosen to manage quota usage. This approach avoids unnecessary explicit row locking while preventing race conditions.
+
+When running 50 concurrent transactions attempting to consume storage quota (max limit allows only 10 increments of 1024 bytes):
+- **Attempts:** 50
+- **Successful:** 10 (10 out of 50 succeeded)
+- **Failed:** 40 (rejected due to quota limit)
+- **Final quota used:** 10,240 / 10,240 (remaining: 0)
+- **Over limit rows:** 0 (the invariant `used <= max_limit` holds)
+
+```text
+Attempts: 50
+Successful: 10
+Failed: 40
+Final used: 10240
+Final remaining quota: 0
+Over limit rows: 0
+Race condition invariant passed
+```
+
+#### 2. Job Queue with `SKIP LOCKED` (`pnpm demo:workers`)
+To process queued generation jobs concurrently without collisions, workers use `SELECT ... FOR UPDATE SKIP LOCKED`. This allows each worker to pick up the next available job immediately without waiting on locks held by other workers.
+
+Benchmark results processing a queue of 100 jobs (with 250ms processing time per job):
+- **1 worker (sequential):** ~27.5 s
+- **3 workers (concurrent with `SKIP LOCKED`):** **9.69 s**
+- **Processed more than once:** 0 (no duplicate processing)
+
+```text
+[9.69 s] Workers did total: 100 operations
+Processed more than once: 0
+```
+
+#### 3. Transaction Retry on Serialization Failure / Deadlock (`pnpm demo:retry`)
+The retry mechanism handles two transient PostgreSQL error codes: `40001` (`serialization_failure`) and `40P01` (`deadlock_detected`). In both cases, PostgreSQL automatically aborts the affected transaction, requiring the operation to be retried in a new transaction after a short backoff.
+
+Benchmark results with 2 concurrent workers updating quota under `SERIALIZABLE` isolation:
+- **Total operations / attempts:** 20
+- **Total retries:** 3 (handled error `40001` / `40P01` and succeeded on retry)
+- **Final result:** All operations completed without data corruption or quota violations.
+
+```text
+[worker-1 | 0.1s] did total operations: 12
+[worker-2 | 0.088s] did total operations: 8
+Attempts: 20
+Total retries: 3
+```
 
 ### Postgres Connection Pool `transaction` mode
 PgBouncer uses transaction mode to reuse database connections more efficiently. A client keeps the same PostgreSQL connection only during a transaction, and after COMMIT or ROLLBACK that connection returns to the pool. Because of this, session-level state is not reliable between transactions: regular SET, LISTEN, and session-level prepared statements may not work as expected across different transactions. SET LOCAL is safe because it only applies inside the current transaction.
@@ -350,11 +417,24 @@ PgBouncer uses transaction mode to reuse database connections more efficiently. 
 ## Trade-offs
 
 ### WebSocket vs SSE
-WebSocket provides low-latency, duplex communication, allowing both the client and server to send messages independently. However, when using the native WebSocket API, the client needs to handle reconnection, implement cursor-based event recovery, and manage other reliability features manually.
 
-SSE provides one-way communication from the server to the client. This approach is simpler and can be more lightweight for server-to-client updates, as it uses standard HTTP and does not require additional client-side libraries in browsers. Automatic reconnection is supported out of the box through the native browser EventSource API.
+| Criterion | SSE | WebSocket |
+|---|---|---|
+| Direction | Server to client | Two-way |
+| Connection setup | HTTP response stream | WebSocket upgrade |
+| Reconnection | Built in through `EventSource` | Client must reconnect |
+| Best fit | Job status and notifications | Interactive, low-latency exchanges |
+| Infrastructure | Works with standard HTTP proxies | Requires WebSocket upgrade support |
+| Scaling events | Needs shared event delivery across instances | Also needs shared event delivery across instances |
 
-### RabbitmQ Prefetch
-The default prefetch count for the `GenerationJob` consumer is set to 4, considering the 30-minute consumer timeout and the fact that generating a single test can take up to 7 minutes. This ensures that all prefetched jobs can be processed within the timeout window.
+For this API, SSE is the simpler choice for one-way generation status updates. Use WebSocket when clients need to send frequent messages over the same connection.
 
+With two or more API instances, events kept in memory are not shared. A client connected to another instance may miss an update. Shared event delivery is needed for both SSE and WebSocket.
+
+Run the demo:
+
+```bash
+pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs
+pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs --same-room
+```
 

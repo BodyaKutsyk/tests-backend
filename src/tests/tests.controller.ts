@@ -50,6 +50,6 @@ export class TestsController {
     id: string,
     @Headers('last-event-id') lastEventId?: string,
   ): Promise<Observable<MessageEvent>> {
-    return this.generationJobEventService.stream(id);
+    return this.generationJobEventService.stream(id, lastEventId);
   }
 }

@@ -26,7 +26,7 @@ export class TestsPublisher {
         id,
         occurredAt,
         eventId,
-        status: GenerationJobStatus.Done,
+        status: GenerationJobStatus.Queued,
       },
     });
   }
