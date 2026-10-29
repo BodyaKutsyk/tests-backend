@@ -9,9 +9,10 @@ const options = {
 
 const { values } = parseArgs({ options });
 const isSameRoom = !!values['same-room'];
+const PORT = Number(process.env.API_PORT || 3000);
 
 function listen(roomId, userId) {
-  const socket = io('http://localhost:3000/tests', {
+  const socket = io(`http://localhost:${PORT}/tests`, {
     autoConnect: false,
     auth: { testJobId: roomId, userId },
   });

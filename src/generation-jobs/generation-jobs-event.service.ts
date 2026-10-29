@@ -36,7 +36,7 @@ export class GenerationJobsEventService {
     this.events$.next({
       id: ++this.lastId,
       event,
-      type: '',
+      type: event.type,
     });
   }
 }
