@@ -1,0 +1,50 @@
+name: Pact contract tests
+run-name: pact contract tests
+on: [push]
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    env:
+      PACT_BROKER_PORT: 9292
+      PACT_BROKER_DB_USER: pact
+      PACT_BROKER_DB_PASSWORD: pact
+      PACT_BROKER_DB_NAME: pact
+      PACT_BROKER_URL: http://localhost:9292
+      API_PORT: 3000
+      SKIP_VAULT: 1
+      POSTGRES_DB: pact_test
+      POSTGRES_USER: pact_test
+      POSTGRES_USER_PASSWORD: pact_test
+      POSTGRES_ADMIN: pact_test
+      POSTGRES_ADMIN_PASSWORD: pact_test
+      POSTGRES_PASSWORD_FILE: /tmp/unused-db-password
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start Pact Broker
+        run: docker compose -f docker-compose.pact.yml up -d --wait
+
+      - name: Consumer contract test
+        run: pnpm test:contract:consumer
+
+      - name: Consumer contract publishing
+        run: pnpm contract:publish "${PACT_BROKER_URL}"
+
+      - name: Provider contract test
+        run: pnpm verify:provider
+
+      - name: Can consumer deploy?
+        run: pnpm contract:can-i-deploy "${PACT_BROKER_URL}"
+
+      - name: Can provider deploy?
+        run: pnpm contract:can-i-deploy:provider "${PACT_BROKER_URL}"

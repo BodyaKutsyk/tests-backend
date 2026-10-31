@@ -162,10 +162,44 @@ Before starting the project, install the dependencies:
 If you made some changes in the `openapi/openapi.yaml` update docs HTML file via `pnpm openapi:build`.
 For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Testing
-1. Project uses jest library as test runner
-2. API contract testing is done via `pact@4`
-3. To test the project, use `pnpm test`
-4. To validate existing `openapi.yaml` specification use `pnpm openapi:lint`
+The project uses Jest. Run `pnpm test` for unit tests, `pnpm test:integration` for repository tests, and `pnpm test:e2e` for HTTP tests. Integration, e2e, and provider tests use disposable PostgreSQL containers through Testcontainers. Each run gets a clean database that is discarded afterward, which prevents tests from changing development data and reduces failures caused by shared or stale state. Pact provider verification uses the same disposable-database approach, while the Pact Broker runs separately with persistent storage so published contracts and verification results remain available between test runs.
+
+### Pact contract tests
+
+Pact uses consumer-driven contracts: the consumer test records the frontend's expected API behavior, then the provider verifier checks the API against that contract. Provider verification seeds its disposable database for the declared provider state and publishes the verification result to the broker on every run. The broker stores contract versions separately from the disposable test database, so test data can be safely reset without losing contract history or verification results.
+
+Start the broker and its PostgreSQL database:
+
+```bash
+pnpm infisical docker compose -f docker-compose.pact.yml up -d --wait
+```
+
+Run the consumer contract test, publish the generated contract, and verify the provider:
+
+```bash
+export PACT_BROKER_URL="${PACT_BROKER_URL:-http://localhost:9292}"
+pnpm test:contract
+```
+
+The provider verification result is published by `verify:provider`. Check deployability for both participants separately: the first command checks the consumer (`frontend`), and the second checks the provider (`tests-api`). Run both commands because a deploy is safe only when the contracts for each participant are compatible with the versions recorded in the broker.
+
+```bash
+pnpm contract:can-i-deploy "$PACT_BROKER_URL"
+pnpm contract:can-i-deploy:provider "$PACT_BROKER_URL"
+```
+
+For each command, a successful result reports that the participant version is safe to deploy and exits with status `0`. If the broker has no matching verification or reports an incompatible contract, the command reports that deployment is not safe and exits with a non-zero status. Treat both checks as required; a passing consumer check does not imply that the provider check passes, or vice versa.
+
+#### CI result
+
+In [GitHub Actions run](https://github.com/BodyaKutsyk/tests-backend/actions/runs/40947017588/job/123704943241?pr=11), both deployability checks passed:
+
+| Participant checked | Version | Contract partner | Partner version | Result |
+| --- | --- | --- | --- | --- |
+| `frontend` (consumer) | `0.1` | `tests-api` | `0.1` | Safe to deploy |
+| `tests-api` (provider) | `0.1` | `frontend` | `0.1` | Safe to deploy |
+
+The broker reported that all required verification results were published and successful. It also warned that no deployment environment was specified, so the result is not environment-specific.
 
 ---
 
@@ -174,7 +208,7 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 ### Environment variables
 
 ```text
-API_PORT                 -> Port used by the backend API inside the container.
+API_PORT                 -> Port used by the backend API.
 POSTGRES_DB              -> Name of the PostgreSQL database.
 POSTGRES_USER            -> PostgreSQL application user used by the backend.
 POSTGRES_USER_PASSWORD   -> Initial password for the PostgreSQL application user.
@@ -183,6 +217,11 @@ POSTGRES_ADMIN_PASSWORD  -> Password for the PostgreSQL administrator.
 POSTGRES_PASSWORD_FILE   -> Path to the file containing the current rotated application user password.
 POSTGRES_PORT            -> Connection port to the PostgreSQL
 POSTGRES_HOST            -> Host of the PostgreSQL
+PACT_BROKER_DB_NAME      -> Pact Broker PostgreSQL database name.
+PACT_BROKER_DB_USER      -> Pact Broker PostgreSQL user name.
+PACT_BROKER_DB_PASSWORD  -> Pact Broker PostgreSQL password.
+PACT_BROKER_PORT         -> Pact Broker service port.
+PACT_BROKER_URL          -> Pact Broker URL, default http://localhost:9292.
 
 ```
 
@@ -326,11 +365,6 @@ The application uses `RESTRICT` for relations referencing the `User` entity to p
 `CASCADE` is used for child entities that have no meaningful value after their parent entity is deleted.
 
 `SET NULL` is used for optional relations where the child entity should remain after the referenced entity is deleted.
-
-// можливі транзакції: 
-1. створення тесту (test) -> питання -> відповіді
-2. проходження тесту (attempt) -> response
-3. створення фідбеку по тесту (responses) -> evaluationJob -> evaluations 
 
 ### Concurrency
 

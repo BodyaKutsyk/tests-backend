@@ -16,7 +16,7 @@ export class Evaluation extends Base {
   explanation: string | null;
 
   @Column({ type: 'boolean', default: false })
-  is_correct: boolean;
+  isCorrect: boolean;
 
   @ManyToOne(() => EvaluationJob, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'evaluation_job_id' })
