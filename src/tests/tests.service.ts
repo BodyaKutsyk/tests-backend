@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Test } from '../entities/test.js';
 import { CreateTestDto, UpdateTestDto } from './types/tests-request.dto.js';
 import { CreateTestResponseDto } from './types/tests-response.dto.js';
-import { GenerationJobsWorkerService } from '../generation-jobs/generation-jobs-worker.service.js';
+import { TestsPublisher } from './tests.publisher.js';
 
 // will be replaced with JWT
 let userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845';
@@ -17,12 +17,13 @@ export class TestsService {
     private readonly generationJobsRepo: Repository<GenerationJob>,
     @InjectRepository(GenerationJob)
     private readonly testsRepo: Repository<Test>,
-    private readonly generationJobsWorkersService: GenerationJobsWorkerService,
+    private readonly testsPublisher: TestsPublisher,
   ) {}
 
   async create(
     { files, questionType, questionCount }: CreateTestDto,
     userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845',
+    skipPublish: boolean,
   ): Promise<CreateTestResponseDto> {
     const documents = [...new Set(files)].map((id) => ({ id }));
     const generationJobPayload = this.generationJobsRepo.create({
@@ -34,7 +35,10 @@ export class TestsService {
 
     const generationJob =
       await this.generationJobsRepo.save(generationJobPayload);
-    await this.generationJobsWorkersService.process(generationJob.id);
+
+    if (!skipPublish) {
+      await this.testsPublisher.testJobCreated(generationJob.id);
+    }
 
     return {
       id: generationJob.id,

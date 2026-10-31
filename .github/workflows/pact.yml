@@ -20,6 +20,10 @@ jobs:
       POSTGRES_PASSWORD_FILE: /tmp/unused-db-password
       POSTGRES_PORT: 5432
       POSTGRES_HOST: 127.0.0.1
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: pact
+      RABBITMQ_PASSWORD: pact
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -48,3 +52,6 @@ jobs:
 
       - name: Can provider deploy?
         run: pnpm contract:can-i-deploy:provider "${PACT_BROKER_URL}"
+
+      - name: Provider verification
+        run: pnpm verify:provider "${PACT_BROKER_URL}"

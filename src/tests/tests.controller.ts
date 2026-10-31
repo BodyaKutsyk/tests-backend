@@ -30,8 +30,13 @@ export class TestsController {
   async create(
     @Body() { userId, ...createTestDto }: CreateTestDto,
     @Res({ passthrough: true }) res: Response,
+    @Headers('skip-publish') skipPublish: boolean,
   ): Promise<CreateTestResponseDto> {
-    const job = await this.testsService.create(createTestDto, userId);
+    const job = await this.testsService.create(
+      createTestDto,
+      userId,
+      skipPublish,
+    );
 
     res.setHeader('Location', `/generation-jobs/${job.id}`);
 

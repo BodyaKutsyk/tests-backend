@@ -44,5 +44,18 @@ services:
       PACT_BROKER_BASE_URL: https://localhost http://localhost http://localhost:9292 http://pact-broker:9292
         https://host.docker.internal http://host.docker.internal http://host.docker.internal:9292
 
+  rabbitmq:
+    image: rabbitmq:4.2.9-management
+    ports:
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: pact
+      RABBITMQ_DEFAULT_PASS: pact
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-volume:
