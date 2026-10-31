@@ -23,6 +23,7 @@ export class TestsService {
   async create(
     { files, questionType, questionCount }: CreateTestDto,
     userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845',
+    skipPublish: boolean,
   ): Promise<CreateTestResponseDto> {
     const documents = [...new Set(files)].map((id) => ({ id }));
     const generationJobPayload = this.generationJobsRepo.create({
@@ -34,7 +35,10 @@ export class TestsService {
 
     const generationJob =
       await this.generationJobsRepo.save(generationJobPayload);
-    await this.testsPublisher.testJobCreated(generationJob.id);
+
+    if (!skipPublish) {
+      await this.testsPublisher.testJobCreated(generationJob.id);
+    }
 
     return {
       id: generationJob.id,

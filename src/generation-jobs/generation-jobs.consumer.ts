@@ -5,14 +5,18 @@ import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
 import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { GenerationJobsWorkflowService } from './generation-jobs-workflow.service.js';
-import { GenerationJobStatus } from '../entities/generation-job.js';
 import { Subject } from 'rxjs';
 
 @Injectable()
 export class GenerationJobsConsumer implements OnApplicationBootstrap {
   private channel: Channel;
   private readonly deliveriesSubject = new Subject<GenerationJobCreatedEvent>();
+  private readonly acknowledgementsSubject =
+    new Subject<GenerationJobCreatedEvent>();
+  private readonly rejectionsSubject = new Subject<GenerationJobCreatedEvent>();
   readonly deliveries$ = this.deliveriesSubject.asObservable();
+  readonly acknowledgements$ = this.acknowledgementsSubject.asObservable();
+  readonly rejections$ = this.rejectionsSubject.asObservable();
 
   constructor(
     @Inject(RabbitMqService)
@@ -27,9 +31,10 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
     await this.startConsuming();
   }
 
-  private async startConsuming() {
+  async startConsuming(beforeConsume?: (channel: Channel) => Promise<void>) {
     this.channel = await this.rabbitMQService.createConsumerChannel();
     await this.topology.setup(this.channel);
+    await beforeConsume?.(this.channel);
 
     await this.channel.consume(
       GENERATION_JOBS_ROUTING_KEYS.CREATED,
@@ -43,10 +48,14 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
         );
         this.deliveriesSubject.next(response);
 
-        await this.workflow.process(response.id);
+        try {
+          await this.workflow.process(response.id);
 
-        if (response.status === GenerationJobStatus.Done) {
           this.channel.ack(data);
+          this.acknowledgementsSubject.next(response);
+        } catch {
+          this.channel.nack(data, false, false);
+          this.rejectionsSubject.next(response);
         }
       },
       { noAck: false },

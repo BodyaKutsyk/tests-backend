@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   GenerationJob,
@@ -21,18 +21,42 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
 
   private readonly processing = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
+  private readonly completion = new Map<
+    string,
+    {
+      resolve: () => void;
+      reject: (error: Error) => void;
+      promise: Promise<void>;
+    }
+  >();
   private stopping = false;
 
   constructor(
     @InjectRepository(GenerationJob)
     private readonly generationJobRepo: Repository<GenerationJob>,
+    @Inject(GenerationJobsEventService)
     private readonly eventsService: GenerationJobsEventService,
+    @Inject(TestsParserWorkerService)
     private readonly parserWorker: TestsParserWorkerService,
+    @Inject(TestsGeneratorWorkerService)
     private readonly generatorWorker: TestsGeneratorWorkerService,
   ) {}
 
   async process(jobId: string): Promise<void> {
-    if (this.stopping || this.intervals.has(jobId)) return;
+    if (this.stopping) {
+      throw new Error('Generation workflow is stopping');
+    }
+
+    const existing = this.completion.get(jobId);
+    if (existing) return existing.promise;
+
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    this.completion.set(jobId, { resolve, reject, promise });
 
     const intervalId = setInterval(() => {
       if (this.stopping || this.processing.has(jobId)) return;
@@ -40,9 +64,21 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
       this.processing.add(jobId);
 
       const task = this.tick(jobId)
-        .catch((error) => {
+        .then((finished) => {
+          if (finished) {
+            this.stop(jobId);
+            this.completion.get(jobId)?.resolve();
+            this.completion.delete(jobId);
+          }
+        })
+        .catch((error: unknown) => {
           this.logger.error(error);
           this.stop(jobId);
+          const completion = this.completion.get(jobId);
+          this.completion.delete(jobId);
+          completion?.reject(
+            error instanceof Error ? error : new Error(String(error)),
+          );
         })
         .finally(() => {
           this.processing.delete(jobId);
@@ -53,9 +89,10 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     }, 6000);
 
     this.intervals.set(jobId, intervalId);
+    return promise;
   }
 
-  private async tick(jobId: string): Promise<void> {
+  private async tick(jobId: string): Promise<boolean> {
     let job = await this.generationJobRepo.findOneByOrFail({
       id: jobId,
     });
@@ -69,7 +106,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
 
     if (this.stopping || isFinished) {
       this.stop(jobId);
-      return;
+      return true;
     }
 
     switch (job.status) {
@@ -94,6 +131,8 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     if (this.isFinished(job.status)) {
       this.stop(jobId);
     }
+
+    return this.isFinished(job.status);
   }
 
   private isFinished(status: GenerationJobStatus): boolean {
@@ -120,5 +159,12 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     }
 
     await Promise.allSettled([...this.inFlight]);
+
+    for (const completion of this.completion.values()) {
+      completion.reject(
+        new Error('Generation workflow stopped before completion'),
+      );
+    }
+    this.completion.clear();
   }
 }

@@ -47,6 +47,9 @@
     "demo:race": "pnpm infisical pnpm exec tsx src/race-transaction.ts",
     "demo:workers": "pnpm infisical pnpm exec tsx src/workers-transactions.ts",
     "demo:retry": "pnpm infisical pnpm exec tsx src/retry-transaction.ts",
+    "demo:publish": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-publish.ts",
+    "demo:dlq": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-dlq.ts",
+    "demo:duplicate": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-duplicate.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {

@@ -23,6 +23,7 @@ services:
       <<: *infisical-env
       POSTGRES_HOST: pg_bouncer
       INFISICAL_ENV: prod
+      RABBITMQ_HOST: rabbitmq
     extra_hosts: *infisical-hosts
     ports:
       - "${API_PORT}:${API_PORT}"

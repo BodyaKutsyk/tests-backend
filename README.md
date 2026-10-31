@@ -438,3 +438,47 @@ pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs
 pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs --same-room
 ```
 
+## Async Events with RabbitMQ
+
+The demos publish to the existing work queue and observe the API consumer through RabbitMQ queue statistics and job records. The API consumer stays enabled; the demos do not start a second consumer or purge the queues.
+
+```bash
+pnpm docker:start:dev
+```
+
+In a second terminal, run each demo. The package commands execute the scripts inside the API container through Infisical, where the database secret file and Docker service addresses are available:
+
+```bash
+pnpm demo:publish
+pnpm demo:dlq
+pnpm demo:duplicate
+```
+
+Expected results:
+
+```text
+demo:publish
+published=5
+delivered=5
+effect=5
+acked=5
+dlq=0
+prefetch=4
+
+demo:dlq
+rejected=1
+work=0
+dlq=1
+dlq-reason=rejected
+effect=0
+
+demo:duplicate
+deliveries=2
+effect=1
+skipped=1
+```
+
+`prefetch=4` limits the number of unacknowledged messages. Each job has two 5-second stages, and the workflow checks its state every 6 seconds: up to 22 seconds per job, or about 88 seconds for four concurrent messages.
+
+RabbitMQ provides at-least-once delivery: if an ack is lost, a message may be delivered again. Processing must therefore be idempotent. The duplicate demo publishes the same event twice and checks that the job completes once and redelivery does not create a second effect.
+
