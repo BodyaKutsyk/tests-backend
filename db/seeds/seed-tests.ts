@@ -62,7 +62,7 @@ async function* generateTests(userIds: string[], documentIds: string[]) {
     const userId = faker.helpers.arrayElement(userIds);
     const title = generateTestTitle();
     const createdAt = faker.date.past({ years: 1 }).toISOString();
-    const row = [title, documentId, userId, createdAt].map(escapeCsv).join(',');
+    const row = [title, userId, createdAt].map(escapeCsv).join(',');
 
     yield row + '\n';
   }
@@ -77,7 +77,7 @@ export async function seedTests(client: Client) {
   );
   const copyStream = client.query(
     copyFrom(
-      `COPY tests (name, document_id, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
+      `COPY tests (name, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
     ),
   );
   const documentIds = documentRows.map(({ id }) => id);
