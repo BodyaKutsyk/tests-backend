@@ -8,6 +8,8 @@ import { clearInterval } from 'node:timers';
 import { GenerationJobsEventService } from './generation-jobs-event.service.js';
 import { TestsParserWorkerService } from './workers/tests-parser-worker.service.js';
 import { TestsGeneratorWorkerService } from './workers/tests-generator-worker.service.js';
+import { RedisCacheService } from '../redis/cache/cache.service.js';
+import { getRedisUserTestsCacheKey } from '../contracts/generation/constants.js';
 
 @Injectable()
 export class GenerationJobsWorkflowService implements OnModuleDestroy {
@@ -26,6 +28,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     private readonly eventsService: GenerationJobsEventService,
     private readonly parserWorker: TestsParserWorkerService,
     private readonly generatorWorker: TestsGeneratorWorkerService,
+    private readonly redisCacheService: RedisCacheService,
   ) {}
 
   async process(jobId: string, manager: EntityManager): Promise<void> {
@@ -68,9 +71,15 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
   }
 
   private async tick(jobId: string, manager: EntityManager): Promise<void> {
-    let job = await manager.getRepository(GenerationJob).findOneByOrFail({
-      id: jobId,
+    let job = await manager.getRepository(GenerationJob).findOneOrFail({
+      where: {
+        id: jobId,
+      },
+      relations: {
+        user: true,
+      },
     });
+
     this.eventsService.publish({
       id: jobId,
       status: job.status,
@@ -92,6 +101,9 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
         break;
       case GenerationJobStatus.Generating:
         job.status = GenerationJobStatus.Done;
+        await this.redisCacheService.del(
+          getRedisUserTestsCacheKey(job.user.id),
+        );
     }
 
     await manager.getRepository(GenerationJob).save(job);

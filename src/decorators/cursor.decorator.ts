@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { validate, ValidationError } from 'class-validator';
+import { validate } from 'class-validator';
 import { ParseBase64Pipe } from '../pipes/parse-base64.pipe.js';
 import { CursorDto } from '../types/cursor.dto.js';
 

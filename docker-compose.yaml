@@ -21,6 +21,9 @@ services:
     environment:
       <<: *infisical-env
       POSTGRES_HOST: pg_bouncer
+      RABBITMQ_HOST: rabbitmq
+      REDIS_CACHE_HOST: redis-cache
+      REDIS_QUEUE_HOST: redis-queue
       INFISICAL_ENV: prod
     extra_hosts: *infisical-hosts
     ports:
@@ -135,7 +138,6 @@ services:
   rabbitmq:
     image: rabbitmq:4.2.9-management
     container_name: rabbitmq
-    hostname: ${RABBITMQ_HOST}
     ports:
       - "${RABBITMQ_PORT}:5672"
       - "15672:15672"
@@ -150,6 +152,25 @@ services:
     volumes:
       - rabbitmq-lib:/var/lib/rabbitmq/
       - rabbitmq-log:/var/log/rabbitmq
+  redis-cache:
+    image: redis:7.2-alpine
+    container_name: redis-cache
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    ports:
+      - "${REDIS_CACHE_PORT}:6379"
+    volumes:
+      - redis-cache-data:/data
+
+  redis-queue:
+    image: redis:7.2-alpine
+    container_name: redis-queue
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    ports:
+      - "${REDIS_QUEUE_PORT}:6379"
+    volumes:
+      - redis-queue-data:/data
 
 secrets:
   db_password:
@@ -160,3 +181,5 @@ volumes:
   restore_drill_data:
   rabbitmq-lib:
   rabbitmq-log:
+  redis-queue-data:
+  redis-cache-data:

@@ -192,6 +192,11 @@ For validating `openapi.yml` use `pnpm openapi:lint` based on `redocly/cli`
 | `RABBITMQ_PASSWORD`       | Password used to authenticate with RabbitMQ                                      |
 | `RABBITMQ_PORT`           | Port used to connect to the RabbitMQ                                             |
 | `RABBITMQ_HOST`           | Host used to connect to the RabbitMQ                                             |
+| `REDIS_QUEUE_HOST`        | Host used to connect to the Redis Queue                                          |
+| `REDIS_QUEUE_PORT`        | Port used to connect to the Redis Queue                                          |
+| `REDIS_CACHE_HOST`        | Host used to connect to the Redis Cache                                          |
+| `REDIS_CACHE_PORT`        | Port used to connect to the Redis Cache                                          |
+| `REDIS_PASSWORD`          | Password for the Redis                                                           | 
 
 ### How to start
 
