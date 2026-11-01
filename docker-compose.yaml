@@ -33,6 +33,10 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
     secrets:
       - db_password
   db:
@@ -159,15 +163,19 @@ services:
     command: >
       redis-server
       --requirepass ${REDIS_PASSWORD}
+      --port ${REDIS_CACHE_PORT}
       --appendonly yes
       --maxmemory 512mb
       --maxmemory-policy allkeys-lru
     ports:
-      - "${REDIS_CACHE_PORT}:6379"
+      - "${REDIS_CACHE_PORT}:${REDIS_CACHE_PORT}"
     volumes:
       - redis-cache-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: [
+        "CMD-SHELL",
+        "REDISCLI_AUTH='${REDIS_PASSWORD}' redis-cli -p ${REDIS_CACHE_PORT} ping | grep -q PONG"
+      ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -179,11 +187,13 @@ services:
     container_name: redis-queue
     restart: always
     ports:
-      - "${REDIS_QUEUE_PORT}:6379"
+      - "${REDIS_QUEUE_PORT}:${REDIS_QUEUE_PORT}"
     volumes:
       - redis-queue-data:/data
     command:
       - "redis-server"
+      - "--port"
+      - "${REDIS_QUEUE_PORT}"
       - "--maxmemory-policy"
       - "noeviction"
       - "--appendonly"
@@ -193,7 +203,10 @@ services:
       - "--requirepass"
       - "${REDIS_PASSWORD}"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [
+        "CMD-SHELL",
+        "REDISCLI_AUTH='${REDIS_PASSWORD}' redis-cli -p ${REDIS_QUEUE_PORT} ping | grep -q PONG"
+      ]
       interval: 10s
       timeout: 5s
       retries: 3

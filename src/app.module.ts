@@ -25,6 +25,9 @@ import { RedisCacheModule } from './redis/cache/cache.module.js';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { Redis } from 'ioredis';
+import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
+import { UnusedDocumentsGarbageCollectorModule } from './unused-documents-garbage-collector/unused-documents-garbage-collector.module.js';
 
 @Module({
   imports: [
@@ -68,6 +71,17 @@ import { Redis } from 'ioredis';
         ),
       }),
     }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        connection: {
+          host: configService.get('REDIS_QUEUE_HOST'),
+          port: configService.get('REDIS_QUEUE_PORT'),
+          password: configService.get('REDIS_PASSWORD'),
+        },
+      }),
+    }),
+    ScheduleModule.forRoot(),
     OutboxModule,
     InboxModule,
     RabbitMqModule,
@@ -78,6 +92,7 @@ import { Redis } from 'ioredis';
     QuotasModule,
     RedisQueueModule,
     RedisCacheModule,
+    UnusedDocumentsGarbageCollectorModule,
   ],
   controllers: [AppController],
   providers: [
