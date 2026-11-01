@@ -22,6 +22,9 @@ import { InboxModule } from './inbox/inbox.module.js';
 import { RequireHeaderGuard } from './guards/required-headers/required-headers.guard.js';
 import { RedisQueueModule } from './redis/queue/queue.module.js';
 import { RedisCacheModule } from './redis/cache/cache.module.js';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { Redis } from 'ioredis';
 
 @Module({
   imports: [
@@ -47,7 +50,24 @@ import { RedisCacheModule } from './redis/cache/cache.module.js';
         };
       },
     }),
-
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        throttlers: [
+          {
+            ttl: 5_000,
+            limit: 4,
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis({
+            host: configService.get('REDIS_QUEUE_HOST'),
+            port: configService.get('REDIS_QUEUE_PORT'),
+            password: configService.get('REDIS_PASSWORD'),
+          }),
+        ),
+      }),
+    }),
     OutboxModule,
     InboxModule,
     RabbitMqModule,
@@ -77,6 +97,10 @@ import { RedisCacheModule } from './redis/cache/cache.module.js';
     {
       provide: APP_GUARD,
       useClass: RequireHeaderGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })
