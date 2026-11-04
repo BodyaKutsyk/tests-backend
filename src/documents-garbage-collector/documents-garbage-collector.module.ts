@@ -3,12 +3,12 @@ import { BullModule } from '@nestjs/bullmq';
 import { DOCUMENTS_GC_QUEUE } from '../contracts/documents/constants.js';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env.schema.js';
-import { UnusedDocumentsGarbageCollectorPublisher } from './unused-documents-garbage-collector.publisher.js';
+import { DocumentsGarbageCollectorPublisher } from './documents-garbage-collector-publisher.service.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../entities/user.js';
 import { Document } from '../entities/document.js';
 import { Test } from '../entities/test.js';
-import { UnusedDocumentsGarbageCollectorConsumer } from './unused-documents-garbage-collector.consumer.js';
+import { DocumentsGarbageCollectorConsumer } from './documents-garbage-collector.consumer.js';
 
 @Module({
   imports: [
@@ -26,8 +26,8 @@ import { UnusedDocumentsGarbageCollectorConsumer } from './unused-documents-garb
     }),
   ],
   providers: [
-    UnusedDocumentsGarbageCollectorPublisher,
-    UnusedDocumentsGarbageCollectorConsumer,
+    DocumentsGarbageCollectorPublisher,
+    DocumentsGarbageCollectorConsumer,
   ],
 })
-export class UnusedDocumentsGarbageCollectorModule {}
+export class DocumentsGarbageCollectorModule {}

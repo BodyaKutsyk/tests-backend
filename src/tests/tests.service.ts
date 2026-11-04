@@ -67,15 +67,16 @@ export class TestsService {
     );
 
     if (cache) {
-      console.log('returning cached');
       return cache;
     }
 
     const uniqToken = randomUUID();
     const lockTtlMs = 5000;
+    const lockKey = getRedisUserTestsLockKey(userId);
+
     const isLockAcquired = await this.redisCacheService.acquireLock(
+      lockKey,
       uniqToken,
-      getRedisUserTestsLockKey(userId),
       lockTtlMs,
     );
 
@@ -99,7 +100,7 @@ export class TestsService {
     } else {
       return (
         (await this.redisCacheService.waitAndRead<Test[]>(
-          getRedisUserTestsCacheKey(userId),
+          lockKey,
           uniqToken,
         )) ?? []
       );

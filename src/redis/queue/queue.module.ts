@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Redis } from 'ioredis';
 import { Env } from '../../config/env.schema.js';
 import { REDIS_QUEUE_CLIENT } from '../constants.js';
 import { RedisQueueService } from './queue.service.js';
 
+@Global()
 @Module({
   providers: [
     RedisQueueService,
@@ -20,6 +21,6 @@ import { RedisQueueService } from './queue.service.js';
       },
     },
   ],
-  exports: [RedisQueueService],
+  exports: [RedisQueueService, REDIS_QUEUE_CLIENT],
 })
 export class RedisQueueModule {}

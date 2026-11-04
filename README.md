@@ -362,4 +362,12 @@ SSE provides one-way communication from the server to the client. This approach 
 ### RabbitmQ Prefetch
 The default prefetch count for the `GenerationJob` consumer is set to 4, considering the 30-minute consumer timeout and the fact that generating a single test can take up to 7 minutes. This ensures that all prefetched jobs can be processed within the timeout window.
 
+### Redis: Cache, Sessions, and Rate Limiting
+
+Redis instances. The cache uses allkeys-lru to evict keys when memory is full. BullMQ and sessions use a separate Redis instance with noeviction, AOF, and a persistent volume to protect data across restarts.
+
+Cache. TTL limits how long cached data can be stale. Jitter spreads expirations to reduce cache stampedes.
+
+Rate limiting. Redis shares counters across app instances. NestJS Throttler tracks IPs by default. The fixed window allows 4 requests per 5 seconds; excess requests receive 429 and Retry-After. A brief burst across window boundaries is possible.
+
 

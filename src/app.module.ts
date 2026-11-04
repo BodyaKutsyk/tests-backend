@@ -27,7 +27,8 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { Redis } from 'ioredis';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
-import { UnusedDocumentsGarbageCollectorModule } from './unused-documents-garbage-collector/unused-documents-garbage-collector.module.js';
+import { DocumentsGarbageCollectorModule } from './documents-garbage-collector/documents-garbage-collector.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
   imports: [
@@ -92,7 +93,8 @@ import { UnusedDocumentsGarbageCollectorModule } from './unused-documents-garbag
     QuotasModule,
     RedisQueueModule,
     RedisCacheModule,
-    UnusedDocumentsGarbageCollectorModule,
+    DocumentsGarbageCollectorModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

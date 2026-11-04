@@ -12,6 +12,7 @@ import {
   FileUploadResponse,
   UploadFilesResponseDto,
 } from './types/document.dto.js';
+import { NotFoundProblem } from '../exceptions/problem-errors.js';
 
 // will be replaced with JWT
 @Injectable()
@@ -110,7 +111,19 @@ export class DocumentsService {
     return `This action returns a #${id} file`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} file`;
+  async remove(documentIds: string[]) {
+    const uniqIds = [...new Set(documentIds)];
+    const exists = await this.documentRepo
+      .createQueryBuilder('document')
+      .where('document.id IN (:...uniqIds)', { uniqIds })
+      .getCount();
+
+    if (exists === 0) {
+      throw new NotFoundProblem({
+        detail: 'No documents found with these ids',
+      });
+    }
+
+    await this.documentRepo.softDelete(documentIds);
   }
 }
