@@ -54,7 +54,11 @@ describe('API Contract Testing', () => {
           });
         })
         .executeTest(async (mockServer) => {
-          const response = await fetch(`${mockServer.url}/users?limit=10`);
+          const response = await fetch(`${mockServer.url}/users?limit=10`, {
+            headers: {
+              Authorization: 'Bearer 123',
+            },
+          });
           const { items } = (await response.json()) as UsersResponse;
           expect(items?.[0]).not.toBeUndefined();
           const user = items[0] as User;
