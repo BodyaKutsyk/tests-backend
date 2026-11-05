@@ -1,4 +1,4 @@
-import { Get, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 @Injectable()

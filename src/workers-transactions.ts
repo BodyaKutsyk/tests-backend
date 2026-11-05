@@ -17,8 +17,8 @@ async function createTestJobs(dataSource: DataSource, user: User) {
     { length: JOBS_AMOUNT },
     (_, index) => ({
       user,
-      question_count: 10,
-      question_type: questionTypes[index % questionTypes.length],
+      questionCount: 10,
+      questionType: questionTypes[index % questionTypes.length],
     }),
   );
 
