@@ -2,7 +2,10 @@ import { User } from './entities/user.js';
 import { Test } from './entities/test.js';
 import { DataSource } from 'typeorm';
 import { Quota, QuotaType } from './entities/quota.js';
-import { GenerationJob, JobStatus } from './entities/generation-job.js';
+import {
+  GenerationJob,
+  GenerationJobStatus,
+} from './entities/generation-job.js';
 import { QuestionType } from './types/temporary.js';
 
 const questions = [
@@ -250,7 +253,7 @@ export async function createTestTransaction(dataSource: DataSource) {
       user: { id: user.id },
       questionCount: questions.length,
       questionType: QuestionType.MultipleChoice,
-      status: JobStatus.Queued,
+      status: GenerationJobStatus.Queued,
     });
 
     generationJob.test = await testRepo.save({

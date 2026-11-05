@@ -75,3 +75,13 @@ export class UnprocessableProblem extends Problem {
     super({ title, status, ...problem });
   }
 }
+
+export class BadRequestProblem extends Problem {
+  constructor({
+    title = 'Bad Request',
+    status = 400,
+    ...problem
+  }: ProblemArgs = {}) {
+    super({ title, status, ...problem });
+  }
+}

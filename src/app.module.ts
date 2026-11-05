@@ -11,6 +11,10 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { ProblemExceptionFilter } from './exceptions/problem-exception-filter.js';
 import { AppValidationPipe } from './pipes/app-validation.pipe.js';
+import { TestsModule } from './tests/tests.module.js';
+import { DocumentsModule } from './documents/documents.module.js';
+import { QuotasModule } from './quotas/quotas.module.js';
+import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
 
 @Module({
   imports: [
@@ -37,6 +41,10 @@ import { AppValidationPipe } from './pipes/app-validation.pipe.js';
       },
     }),
     UsersModule,
+    GenerationJobModule,
+    TestsModule,
+    DocumentsModule,
+    QuotasModule,
   ],
   controllers: [AppController],
   providers: [

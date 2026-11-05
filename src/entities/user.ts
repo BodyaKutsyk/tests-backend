@@ -27,7 +27,9 @@ export class User extends BaseWithDeleted {
   @OneToMany(() => Attempt, (attempt) => attempt.user)
   attempts: Relation<Attempt[]>;
 
-  @OneToMany(() => Document, (document) => document.user)
+  @OneToMany(() => Document, (document) => document.user, {
+    cascade: ['insert'],
+  })
   documents: Relation<Document[]>;
 
   @OneToMany(() => GenerationJob, (generationJob) => generationJob.user)

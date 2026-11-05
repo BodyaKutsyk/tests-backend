@@ -1,0 +1,1 @@
+curl -i -F "files=@./README.md" -F "files=@./db/optimizations.md" http://localhost:3000/files

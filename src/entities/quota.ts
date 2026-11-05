@@ -16,7 +16,7 @@ export enum QuotaType {
   Generation = 'generation',
 }
 
-@Check(`"used" <= "max_limit"`)
+@Check('CHK_quota_used_range', `"used" BETWEEN 0 AND "max_limit"`)
 @Index(['user', 'quotaType'], { unique: true })
 @Entity('quotas')
 export class Quota extends Base {

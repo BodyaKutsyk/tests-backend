@@ -1,7 +1,10 @@
 import { DataSource, MoreThan } from 'typeorm';
 import { dataSourceOptions } from './data-source.js';
 import { QueryLogger } from './utils/query-logger.js';
-import { GenerationJob, JobStatus } from './entities/generation-job.js';
+import {
+  GenerationJob,
+  GenerationJobStatus,
+} from './entities/generation-job.js';
 import { User } from './entities/user.js';
 import { asyncTimeout } from './utils/async-timeout.js';
 import { QuestionType } from './types/temporary.js';
@@ -38,7 +41,7 @@ async function processQueuedJob(dataSource: DataSource, userId: string) {
       .createQueryBuilder(GenerationJob, 'generation_job')
       .where('generation_job.user_id = :id', { id: userId })
       .andWhere('generation_job.status = :status', {
-        status: JobStatus.Queued,
+        status: GenerationJobStatus.Queued,
       })
       .orderBy('generation_job.created_at', 'ASC')
       .limit(1)
@@ -50,7 +53,10 @@ async function processQueuedJob(dataSource: DataSource, userId: string) {
     const updatedJob = await queryRunner.manager
       .createQueryBuilder()
       .update(GenerationJob)
-      .set({ status: JobStatus.Parsing, processed: () => 'processed + 1' })
+      .set({
+        status: GenerationJobStatus.Parsing,
+        processed: () => 'processed + 1',
+      })
       .where('id = :id', { id: generationJob?.id })
       .returning('*')
       .execute();

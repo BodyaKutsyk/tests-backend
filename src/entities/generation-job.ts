@@ -14,7 +14,7 @@ import { Test } from './test.js';
 import { Document } from './document.js';
 import { QuestionType } from '../types/temporary.js';
 
-export enum JobStatus {
+export enum GenerationJobStatus {
   Queued = 'queued',
   Parsing = 'parsing',
   Generating = 'generating',
@@ -27,14 +27,18 @@ export class GenerationJob extends Base {
   @Column({ enum: QuestionType, type: 'enum' })
   questionType: QuestionType;
 
-  @Column({ type: 'enum', enum: JobStatus, default: JobStatus.Queued })
-  status: JobStatus;
+  @Column({
+    type: 'enum',
+    enum: GenerationJobStatus,
+    default: GenerationJobStatus.Queued,
+  })
+  status: GenerationJobStatus;
 
   @Column({ type: 'int' })
   questionCount: number;
 
   @Column({ type: 'int', default: 0 })
-  processed: number
+  processed: number;
 
   @OneToOne(() => Test, (test) => test.generationJob, {
     nullable: true,

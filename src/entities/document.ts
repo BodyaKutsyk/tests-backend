@@ -16,7 +16,7 @@ import { GenerationJob } from './generation-job.js';
 @Index(['createdAt', 'mimeType'])
 @Entity('documents')
 export class Document extends BaseWithDeleted {
-  @Column({ type: 'varchar', length: 512 })
+  @Column({ type: 'varchar', length: 512, unique: true })
   storageKey: string;
 
   @Index('idx_document_file_name_length', { synchronize: false })
@@ -26,8 +26,14 @@ export class Document extends BaseWithDeleted {
   @Column({ type: 'varchar', length: 100 })
   mimeType: string;
 
-  @Column({ type: 'bigint' })
-  size: string;
+  @Column({
+    type: 'bigint',
+    transformer: {
+      from: (val: string) => Number(val),
+      to: (val: number) => val,
+    },
+  })
+  size: number;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })

@@ -77,12 +77,14 @@ function transformHttpExceptionToProblem(exception: HttpException) {
           }),
       });
     case HttpStatus.NOT_FOUND:
+      console.log(exception);
       return new NotFoundProblem();
     case HttpStatus.UNAUTHORIZED:
       return new UnauthorizedProblem();
     case HttpStatus.CONFLICT:
       return new ConflictProblem();
     default:
+      console.log(exception);
       return new Problem({
         status: exception.getStatus(),
         title: exception.name,
