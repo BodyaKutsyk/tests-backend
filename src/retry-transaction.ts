@@ -9,6 +9,7 @@ import { asyncTimeout } from './utils/async-timeout.js';
 
 const AMOUNT_TO_INCREASE = 1_024;
 const MAX_LIMIT = 20_480;
+let totalRetries = 0;
 
 async function increaseUserUsedStorage(
   dataSource: DataSource,
@@ -58,6 +59,7 @@ async function executeWithRetry(retries: number, cb: () => Promise<boolean>) {
         const { code } = e.driverError;
         if (code === '40001' || code === '40P01') {
           console.log(`retry ${i + 1}, error: ${code}`);
+          totalRetries++;
           await asyncTimeout(10);
           continue;
         }
@@ -115,7 +117,7 @@ async function raceTransaction() {
     const used = quota.used;
 
     console.log(
-      `Attempts: ${totalAttempts}\nFinal used: ${used}\nMax limit: ${maxStorage}`,
+      `Attempts: ${totalAttempts}\nTotal retries: ${totalRetries}\nFinal used: ${used}\nMax limit: ${maxStorage}`,
     );
   } catch (e) {
     console.log(e);

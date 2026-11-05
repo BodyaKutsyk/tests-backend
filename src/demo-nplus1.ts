@@ -12,28 +12,34 @@ type RawTest = {
 async function logNPlus1(
   testRepo: Repository<Test>,
   userRepo: Repository<User>,
+  limit: number,
 ) {
   const tests: RawTest[] = await testRepo.query(`
   SELECT *
   FROM tests
   WHERE user_id IS NOT NULL
-  LIMIT 50
-`);
+  LIMIT $1
+`, [limit]);
 
   for (const test of tests) {
     await userRepo.findOneBy({ id: test.user_id });
   }
 }
 
-async function logNPlus1Fix(userRepo: Repository<User>) {
+async function logNPlus1Fix(userRepo: Repository<User>, limit: number) {
   await userRepo
     .createQueryBuilder('user')
     .leftJoinAndSelect('user.tests', 'test')
-    .limit(50)
+    .limit(limit)
     .getMany();
 }
 
 async function main() {
+  const limit = Number(process.argv[2] ?? 50);
+  if (!Number.isSafeInteger(limit) || limit <= 0) {
+    throw new Error('Pass a positive integer as the sample size');
+  }
+
   const logger = new QueryLogger();
   const loggingDataSource = new DataSource({
     ...dataSourceOptions,
@@ -50,16 +56,16 @@ async function main() {
     logger.resetCount();
 
     console.log('\nN+1 request\n');
-    await logNPlus1(testRepository, userRepo);
+    await logNPlus1(testRepository, userRepo, limit);
     nPlus1QueryCount = logger.getCount();
     logger.resetCount();
 
     console.log('\nN+1 request fix\n');
-    await logNPlus1Fix(userRepo);
+    await logNPlus1Fix(userRepo, limit);
     nPlus1QueryFixCount = logger.getCount();
 
     console.log(
-      `\n\nSelecting 50 users that have tests.\nBefore fix: ${nPlus1QueryCount} queries\nAfter fix: ${nPlus1QueryFixCount} query`,
+      `\n\nSelecting up to ${limit} tests and users.\nBefore fix: ${nPlus1QueryCount} queries\nAfter fix: ${nPlus1QueryFixCount} query`,
     );
     console.log();
     process.exit();

@@ -34,21 +34,6 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
   async process(jobId: string, manager: EntityManager): Promise<void> {
     if (this.stopping || this.intervals.has(jobId)) return;
 
-    const result = await manager
-      .createQueryBuilder()
-      .update(GenerationJob)
-      .set({ status: GenerationJobStatus.Parsing })
-      .where('id = :id', { id: jobId })
-      .andWhere('status = :status', {
-        status: GenerationJobStatus.Queued,
-      })
-      .returning('id')
-      .execute();
-
-    if (result.affected === 0) {
-      return;
-    }
-
     const intervalId = setInterval(() => {
       if (this.stopping || this.processing.has(jobId)) return;
 
@@ -83,6 +68,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     this.eventsService.publish({
       id: jobId,
       status: job.status,
+      type: job.status,
     });
 
     const isFinished = this.isFinished(job.status);
@@ -111,6 +97,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     this.eventsService.publish({
       id: jobId,
       status: job.status,
+      type: job.status,
     });
 
     if (this.isFinished(job.status)) {

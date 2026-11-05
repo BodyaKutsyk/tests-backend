@@ -87,6 +87,7 @@ docker exec \
     --clean \
     --if-exists \
     --no-owner \
+    --no-acl \
     "/backups/$BACKUP_NAME"
 
 echo "Running validation..."

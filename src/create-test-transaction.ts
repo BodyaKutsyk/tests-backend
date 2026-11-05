@@ -13,19 +13,19 @@ const questions = [
     value: 'Which phenomenon can occur at the READ COMMITTED isolation level?',
     answerOptions: [
       {
-        is_correct: true,
+        isCorrect: true,
         value: 'Non-repeatable read',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Dirty read',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'No concurrent updates',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'All transactions are executed serially',
       },
     ],
@@ -34,19 +34,19 @@ const questions = [
     value: 'What does SELECT FOR UPDATE do in PostgreSQL?',
     answerOptions: [
       {
-        is_correct: true,
+        isCorrect: true,
         value: 'Locks selected rows against conflicting updates and deletes',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Locks the entire table',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Deletes selected rows after reading them',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Prevents all SELECT queries from reading the rows',
       },
     ],
@@ -55,20 +55,20 @@ const questions = [
     value: 'What is the main purpose of SELECT FOR SHARE?',
     answerOptions: [
       {
-        is_correct: true,
+        isCorrect: true,
         value:
           'To lock rows while still allowing other transactions to acquire compatible shared locks',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'To exclusively lock rows for updates',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'To automatically commit a transaction',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'To skip all locked rows',
       },
     ],
@@ -77,19 +77,19 @@ const questions = [
     value: 'What does the NOWAIT option do when acquiring a row lock?',
     answerOptions: [
       {
-        is_correct: true,
+        isCorrect: true,
         value: 'Immediately returns an error if the row is already locked',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Waits until the lock becomes available',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Ignores the existing lock',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Automatically rolls back the other transaction',
       },
     ],
@@ -98,19 +98,19 @@ const questions = [
     value: 'What does SKIP LOCKED do?',
     answerOptions: [
       {
-        is_correct: true,
+        isCorrect: true,
         value: 'Skips rows that are currently locked by another transaction',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Removes locks from selected rows',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Waits for all locked rows to become available',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'Locks all rows in the table',
       },
     ],
@@ -119,20 +119,20 @@ const questions = [
     value: 'What is a lost update?',
     answerOptions: [
       {
-        is_correct: true,
+        isCorrect: true,
         value:
           'When one transaction overwrites changes made by another transaction',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'When a transaction reads uncommitted data',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'When a SELECT query returns no rows',
       },
       {
-        is_correct: false,
+        isCorrect: false,
         value: 'When PostgreSQL deletes an old row version',
       },
     ],

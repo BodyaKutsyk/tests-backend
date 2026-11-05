@@ -1,77 +1,111 @@
 import { io } from 'socket.io-client';
 import { parseArgs } from 'node:util';
+import { Helper } from './utils/helper.ts';
+import { randomUUID } from 'crypto';
 
 const options = {
   ['same-room']: { type: 'boolean' },
 };
 
 const { values } = parseArgs({ options });
-
 const isSameRoom = !!values['same-room'];
+const PORT = Number(process.env.API_PORT || 3000);
 
-function getTestStatusRequest(requestData) {
-  return new Promise((res, rej) => {
-    const socket = io('http://localhost:3000/tests', {
-      auth: {
-        testJobId: requestData.testId,
-      },
-    });
-
-    socket.on('connect', () => {
-      console.log('Connected:', socket.id);
-    });
-
-    socket.on('test.status', ({ data }) => {
-      console.log(`[test-#${requestData.testId}] status: ${data.status}`);
-      requestData.status = data.status;
-      if (data.status === 'done' || data.status === 'failed') {
-        res();
-        socket.disconnect();
-      }
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('Connection failed:', error.message);
-      rej();
-      socket.disconnect();
-    });
+function listen(roomId, userId) {
+  const socket = io(`http://localhost:${PORT}/tests`, {
+    autoConnect: false,
+    auth: { testJobId: roomId, userId },
   });
+  const events = [];
+
+  socket.on('test.status', ({ data }) => events.push(data));
+
+  const ready = new Promise((resolve, reject) => {
+    socket.once('connect', resolve);
+    socket.once('connect_error', reject);
+  });
+
+  socket.connect();
+  return { socket, events, ready };
 }
 
-const request1 = {
-  testId: '123',
-  status: '',
-};
+async function realtimeDemo(isSameRoom) {
+  const helper = new Helper();
+  const dataSource = helper.dataSource;
+  await dataSource.initialize();
+  const [user1, user2] = await Promise.all([
+    helper.getUserWithDocuments(),
+    helper.getUserWithDocuments(),
+  ]);
 
-const request2 = {
-  testId: '1234',
-  status: '',
-};
+  const user1Docs = user1.documents.map((doc) => doc.id);
+  const user2Docs = user2.documents.map((doc) => doc.id);
+  const idempotentId1 = randomUUID();
+  const idempotentId2 = randomUUID();
 
-if (isSameRoom) {
-  request2.testId = request1.testId;
-}
+  const user1TestPayload = {
+    questionCount: 10,
+    questionType: 'multiple-choice',
+    files: [...user1Docs],
+  };
 
-await Promise.all([
-  getTestStatusRequest(request1),
-  getTestStatusRequest(request2),
-]);
+  const user2TestPayload = {
+    questionCount: 10,
+    questionType: 'multiple-choice',
+    files: [...user2Docs],
+  };
 
-console.log(
-  `Request 1 -> testId: ${request1.testId} received status: ${request1.status}`,
-);
-console.log(
-  `Request 2 -> testId: ${request2.testId} received status: ${request2.status}`,
-);
-if (isSameRoom) {
-  process.exit(
-    Number(
-      !Boolean(
-        request1.testId === request2.testId &&
-        request1.status === request2.status,
-      ),
-    ),
+  const user1TestPromise = helper.createTest(
+    user1TestPayload,
+    idempotentId1,
+    user1.id,
   );
-} else {
-  process.exit(Number(!Boolean(request1.testId !== request2.testId)));
+  const user2TestPromise = helper.createTest(
+    user2TestPayload,
+    idempotentId2,
+    user2.id,
+  );
+
+  const [user1Test, user2Test] = await Promise.all([
+    user1TestPromise,
+    user2TestPromise,
+  ]);
+
+  const room1Id = user1Test.id;
+  const room2Id = user2Test.id;
+  const a = listen(room1Id, user1.id);
+  const b = listen(
+    isSameRoom ? room1Id : room2Id,
+    isSameRoom ? user1.id : user2.id,
+  );
+  try {
+    await Promise.all([a.ready, b.ready]);
+
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('A event timeout')),
+        25_000,
+      );
+
+      a.socket.on('test.status', ({ data }) => {
+        if (data.id === room1Id && ['done', 'failed'].includes(data.status)) {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+
+    const aReceived = a.events.some((event) => event.id === room1Id);
+    const bReceived = b.events.some((event) => event.id === room1Id);
+
+    console.log(`A_RECEIVED=${Number(aReceived)}`);
+    console.log(`B_RECEIVED=${Number(bReceived)}`);
+    process.exitCode = Number(!aReceived || bReceived !== isSameRoom);
+  } finally {
+    a.socket.disconnect();
+    b.socket.disconnect();
+    await dataSource.destroy();
+  }
 }
+
+await realtimeDemo(isSameRoom);

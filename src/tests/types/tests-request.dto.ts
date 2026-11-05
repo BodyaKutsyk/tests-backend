@@ -3,6 +3,7 @@ import {
   ArrayNotEmpty,
   IsEnum,
   IsNumber,
+  IsOptional,
   IsUUID,
   ValidateBy,
 } from 'class-validator';
@@ -14,6 +15,8 @@ import {
 } from '../../utils/demos.js';
 
 export class CreateTestDto {
+  @IsOptional()
+  @IsUUID('4')
   userId?: string;
 
   @IsNumber()

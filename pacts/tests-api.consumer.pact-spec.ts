@@ -21,6 +21,7 @@ describe('API Contract Testing', () => {
     test('successfully returns users', async () => {
       await pact
         .addInteraction()
+        .given('at least one user exists')
         .uponReceiving('a request to get users')
         .withRequest('GET', '/users', (builder) => {
           builder.query({

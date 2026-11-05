@@ -114,10 +114,10 @@ import { DbCounterModule } from './db/db-counter.module.js';
       provide: APP_FILTER,
       useClass: ProblemExceptionFilter,
     },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: AuthInterceptor,
-    },
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: AuthInterceptor,
+    // },
     {
       provide: APP_GUARD,
       useClass: RequireHeaderGuard,

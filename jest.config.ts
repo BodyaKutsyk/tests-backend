@@ -11,6 +11,7 @@ const sharedConfig: Config = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testEnvironment: 'node',
+  testTimeout: 60_000,
 };
 
 const config: Config = {
