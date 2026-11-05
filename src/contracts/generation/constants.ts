@@ -5,3 +5,12 @@ export const GENERATION_JOBS_PREFETCH = 4;
 export const GENERATION_JOBS_ROUTING_KEYS = {
   CREATED: 'generation_jobs.created',
 };
+
+export const REDIS_USER_TESTS_CACHE_KEY = `user-tests`;
+export const REDIS_USER_TESTS_LOCK_KEY = 'lock:users-tests';
+
+export const getRedisUserTestsCacheKey = (userId: string) =>
+  `${REDIS_USER_TESTS_CACHE_KEY}:${userId}`;
+
+export const getRedisUserTestsLockKey = (userId: string) =>
+  `${REDIS_USER_TESTS_LOCK_KEY}:${userId}`;

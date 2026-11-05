@@ -168,7 +168,7 @@ The project uses Jest. Run `pnpm test` for unit tests, `pnpm test:integration` f
 
 Pact uses consumer-driven contracts: the consumer test records the frontend's expected API behavior, then the provider verifier checks the API against that contract. Provider verification seeds its disposable database for the declared provider state and publishes the verification result to the broker on every run. The broker stores contract versions separately from the disposable test database, so test data can be safely reset without losing contract history or verification results.
 
-Start the broker and its PostgreSQL database:
+Start the broker, PostgreSQL, RabbitMQ, and Redis dependencies:
 
 ```bash
 pnpm infisical docker compose -f docker-compose.pact.yml up -d --wait
@@ -227,6 +227,11 @@ The broker reported that all required verification results were published and su
 | `RABBITMQ_PASSWORD`       | Password used to authenticate with RabbitMQ                                      |
 | `RABBITMQ_PORT`           | Port used to connect to the RabbitMQ                                             |
 | `RABBITMQ_HOST`           | Host used to connect to the RabbitMQ                                             |
+| `REDIS_QUEUE_HOST`        | Host used to connect to the Redis Queue                                          |
+| `REDIS_QUEUE_PORT`        | Port used to connect to the Redis Queue                                          |
+| `REDIS_CACHE_HOST`        | Host used to connect to the Redis Cache                                          |
+| `REDIS_CACHE_PORT`        | Port used to connect to the Redis Cache                                          |
+| `REDIS_PASSWORD`          | Password for the Redis                                                           | 
 
 ### How to start
 
@@ -267,26 +272,32 @@ docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sq
 
 ## Grading
 
-### 0. Prepare Environment Variables                                                                                                                                                                                         
-                                                                                                                                                                                                                           
-Before running grading commands directly on the host, export the database variables:                                                                                                                                         
-                                                                                                                                                                                                                           
-```bash                                                                                                                                                                                                                      
-export POSTGRES_DB=my_db                                                                                                                                                                                                     
-export POSTGRES_ADMIN=admin                                                                                                                                                                                                  
-export POSTGRES_ADMIN_PASSWORD=admin_password                                                                                                                                                                                
-export POSTGRES_HOST=127.0.0.1                                                                                                                                                                                               
-export POSTGRES_PORT=5432   
+Run these commands from the repository root. Set `SKIP_VAULT=1` so `pnpm infisical` loads the development values from `.env.example` without contacting Infisical. The grading Compose override passes those values to the API containers and starts them directly.
+
+```bash
+export SKIP_VAULT=1
+export POSTGRES_HOST=127.0.0.1
+export RABBITMQ_HOST=127.0.0.1
+export REDIS_CACHE_HOST=127.0.0.1
+export REDIS_QUEUE_HOST=127.0.0.1
+pnpm install --frozen-lockfile
+pnpm infisical bash -c 'mkdir -p secrets; printf "%s" "$POSTGRES_USER_PASSWORD" > secrets/db_password'
+pnpm infisical docker compose -f docker-compose.yaml -f docker-compose.grading.yml up -d --wait db pg_bouncer rabbitmq redis-cache redis-queue
+pnpm build
+pnpm migrate
+pnpm seed
+pnpm infisical docker compose -f docker-compose.yaml -f docker-compose.grading.yml up -d --build --wait api
+pnpm demo:cache
+pnpm demo:session
+pnpm demo:ratelimit
+pnpm demo:queue
+```
+
+The cache Redis is published on port 6380 and the queue Redis on port 6379. The API is published on port 5137 by the development example. `--wait` lets Redis and PostgreSQL become healthy before migrations and demos start. The rate limit demo starts two additional API containers on ports 3001 and 3002.
 
 ### Running without Infisical
 
-To execute commands without Infisical, use:
-
-```bash
-SKIP_VAULT=1 pnpm infisical <command>
-```
-
-Replace `<command>` with the command you want to execute. In this mode, environment variables are loaded from the local `.env` file.
+Each homework demo runs through `pnpm infisical`. With `SKIP_VAULT=1`, `infisical.sh` loads missing development variables from `.env.example` and runs the demo without contacting Infisical.
 
 ### Backup and Restore Drill
 
@@ -439,6 +450,56 @@ For this API, SSE is the simpler choice for one-way generation status updates. U
 
 With two or more API instances, events kept in memory are not shared. A client connected to another instance may miss an update. Shared event delivery is needed for both SSE and WebSocket.
 
+### Redis: Cache, Sessions, Rate Limiting, and Queue Demo
+
+The project uses two Redis services because eviction policy is configured per server. Cache Redis uses `allkeys-lru`, so it can evict cached data under memory pressure. BullMQ and sessions use a separate Redis service with `noeviction`, AOF, and a persistent Docker volume because this state must survive process restarts and must not be evicted.
+
+Cache entries have a TTL to bound staleness. TTL jitter spreads expirations and reduces simultaneous cache misses.
+
+If a stampede lock expires or its owner crashes, requests may repeat the database read. This is acceptable here because the lock only avoids duplicate reads: the failure can increase database load but does not corrupt business data. A business invariant would need a stronger mechanism.
+
+Sessions are stored in queue Redis. Authenticated requests validate the session and refresh its TTL, keeping active sessions alive. Rate limiting uses shared Redis counters across API instances. NestJS Throttler applies a fixed window of 4 requests per 5 seconds and uses client IP by default; excess requests return 429 with `Retry-After`. We chose the fixed window for its simple, inexpensive counter; a brief burst across a window boundary is acceptable for this endpoint.
+
+#### Queue retry and scheduler demo
+
+With Infisical, start Docker services so the API worker and its existing garbage-collection scheduler are running. For a run without Infisical, use the commands in `Grading` above.
+
+```bash
+pnpm infisical docker compose up -d --wait
+```
+
+Run the demo from the host:
+
+```bash
+pnpm demo:queue
+```
+
+The demo reads `maxmemory-policy` from queue Redis, adds the same job twice with one stable `jobId`, and confirms there is one queued job. The consumer intentionally fails this marked demo job twice; BullMQ retries it and the third attempt succeeds. The marked job exits before the garbage-collection code, so it does not delete document files or rows. The demo also counts configured schedulers and observes two completed scheduler runs, which takes a little over two minutes with the current 60-second interval.
+
+#### Measured demo results
+
+These are results from the local Docker stack on 2026-11-05. The API was published on port 3000, cache Redis on 6380, and queue Redis on 6381. The demo commands finished with exit code 0.
+
+`pnpm demo:cache`:
+
+```text
+cache-lru=1
+cache-maxmemory=1
+warmed=50
+ttl-distinct=47
+concurrent=20
+db-calls=1
+db-calls-warm=0
+```
+
+`pnpm demo:session`:
+
+```text
+requests=3
+sessions=1
+in-redis=1
+ttl-renewed=1
+```
 Run the demo:
 
 ```bash
@@ -446,6 +507,31 @@ pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs
 pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs --same-room
 ```
 
+`pnpm demo:ratelimit`:
+
+```text
+instances=2
+limit=4
+requests=20
+allowed=4
+blocked=16
+status=429
+retry-after=1
+```
+
+`pnpm demo:queue`:
+
+```text
+queue-noeviction=1
+attempts=3
+completed=1
+added=2
+queued=1
+schedulers=1
+scheduled-runs=2
+```
+
+Scheduler count can be greater than one if more schedulers are registered on the queue. The demo exits with an error status if a required retry, de-duplication, Redis policy, or scheduler check fails.
 ## Async Events with RabbitMQ
 
 The demos publish to the existing work queue and observe the API consumer through RabbitMQ queue statistics and job records. The API consumer stays enabled; the demos do not start a second consumer or purge the queues.

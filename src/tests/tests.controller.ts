@@ -10,6 +10,7 @@ import {
   Post,
   Res,
   Sse,
+  Get,
 } from '@nestjs/common';
 import { TestsService } from './tests.service.js';
 import { CreateTestDto } from './types/tests-request.dto.js';
@@ -18,6 +19,7 @@ import { type Response } from 'express';
 import { Observable } from 'rxjs';
 import { GenerationJobsEventService } from '../generation-jobs/generation-jobs-event.service.js';
 import { RequireHeaders } from '../guards/required-headers/required-headers.decorator.js';
+import { RequestHeader } from '../decorators/request-header.decorator.js';
 
 const operations = new Map<string, CreateTestResponseDto>();
 
@@ -64,5 +66,20 @@ export class TestsController {
     @Headers('last-event-id') lastEventId?: string,
   ): Promise<Observable<MessageEvent>> {
     return this.generationJobEventService.stream(id, lastEventId);
+  }
+
+  @Get()
+  @RequireHeaders('user-id')
+  getAll(
+    @RequestHeader(
+      'user-id',
+      new ParseUUIDPipe({
+        version: '4',
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    userId: string,
+  ) {
+    return this.testsService.getAllByUserId(userId);
   }
 }

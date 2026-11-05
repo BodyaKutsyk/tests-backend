@@ -55,36 +55,57 @@ function generateTestTitle() {
   return faker.helpers.arrayElement(titlePatterns)();
 }
 
-async function* generateTests(userIds: string[], documentIds: string[]) {
+async function* generateTests(
+  userIds: string[],
+  documentIds: string[],
+  includeRelations = false,
+) {
   faker.seed(42);
   for (let i = 1; i <= TESTS_COUNT; i++) {
+    const testId = faker.string.uuid();
     const documentId = faker.helpers.arrayElement(documentIds);
     const userId = faker.helpers.arrayElement(userIds);
     const title = generateTestTitle();
     const createdAt = faker.date.past({ years: 1 }).toISOString();
-    const row = [title, userId, createdAt].map(escapeCsv).join(',');
+    const row = includeRelations
+      ? [testId, documentId]
+      : [testId, title, userId, createdAt];
 
-    yield row + '\n';
+    yield row.map(escapeCsv).join(',') + '\n';
   }
 }
 
 export async function seedTests(client: Client) {
   const { rows: documentRows } = await client.query<{ id: string }>(
-    'SELECT id FROM documents LIMIT 1000',
+    'SELECT id FROM documents LIMIT 5000',
   );
   const { rows: userRows } = await client.query<{ id: string }>(
     'SELECT id FROM users LIMIT 1000',
   );
-  const copyStream = client.query(
-    copyFrom(
-      `COPY tests (name, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
-    ),
-  );
   const documentIds = documentRows.map(({ id }) => id);
   const userIds = userRows.map(({ id }) => id);
+  const copyStream = client.query(
+    copyFrom(
+      `COPY tests (id, name, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
+    ),
+  );
 
-  const usersStream = Readable.from(generateTests(userIds, documentIds));
-  await pipeline(usersStream, copyStream);
+  await pipeline(
+    Readable.from(generateTests(userIds, documentIds)),
+    copyStream,
+  );
+
+  const relationsCopyStream = client.query(
+    copyFrom(
+      `COPY test_documents (test_id, document_id) FROM STDIN WITH (FORMAT CSV)`,
+    ),
+  );
+  await pipeline(
+    Readable.from(generateTests(userIds, documentIds, true)),
+    relationsCopyStream,
+  );
+
+  await client.query('VACUUM(ANALYSE) test_documents');
   await client.query('VACUUM(ANALYSE) tests');
-  console.log(`Seeded ${TESTS_COUNT} tests`);
+  console.log(`Seeded ${TESTS_COUNT} tests and their document relations`);
 }

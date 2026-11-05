@@ -17,9 +17,19 @@ import { QuotasModule } from './quotas/quotas.module.js';
 import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
-import { AuthInterceptor } from './interceptors/auth.interceptor.js';
 import { InboxModule } from './inbox/inbox.module.js';
 import { RequireHeaderGuard } from './guards/required-headers/required-headers.guard.js';
+import { RedisQueueModule } from './redis/queue/queue.module.js';
+import { RedisCacheModule } from './redis/cache/cache.module.js';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { Redis } from 'ioredis';
+import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
+import { DocumentsGarbageCollectorModule } from './documents-garbage-collector/documents-garbage-collector.module.js';
+import { AuthModule } from './auth/auth.module.js';
+import { QueryLogger } from './utils/query-logger.js';
+import { DbCounterModule } from './db/db-counter.module.js';
 
 @Module({
   imports: [
@@ -31,6 +41,8 @@ import { RequireHeaderGuard } from './guards/required-headers/required-headers.g
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<Env, true>) => {
         const DB_PASSWORD_FILE = configService.get('POSTGRES_PASSWORD_FILE');
+        const logger = new QueryLogger();
+        const enableLogger = Boolean(process.env.INFISICAL_ENV === 'dev');
 
         return {
           type: 'postgres',
@@ -42,9 +54,40 @@ import { RequireHeaderGuard } from './guards/required-headers/required-headers.g
           database: configService.get('POSTGRES_DB'),
           namingStrategy: new SnakeNamingStrategy(),
           entities: [entitiesPath],
+          logger,
+          logging: enableLogger ? ['query'] : false,
         };
       },
     }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        throttlers: [
+          {
+            ttl: 5_000,
+            limit: 4,
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis({
+            host: configService.get('REDIS_QUEUE_HOST'),
+            port: configService.get('REDIS_QUEUE_PORT'),
+            password: configService.get('REDIS_PASSWORD'),
+          }),
+        ),
+      }),
+    }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        connection: {
+          host: configService.get('REDIS_QUEUE_HOST'),
+          port: configService.get('REDIS_QUEUE_PORT'),
+          password: configService.get('REDIS_PASSWORD'),
+        },
+      }),
+    }),
+    ScheduleModule.forRoot(),
     OutboxModule,
     InboxModule,
     RabbitMqModule,
@@ -53,6 +96,11 @@ import { RequireHeaderGuard } from './guards/required-headers/required-headers.g
     TestsModule,
     DocumentsModule,
     QuotasModule,
+    RedisQueueModule,
+    RedisCacheModule,
+    DocumentsGarbageCollectorModule,
+    AuthModule,
+    DbCounterModule,
   ],
   controllers: [AppController],
   providers: [
@@ -73,6 +121,9 @@ import { RequireHeaderGuard } from './guards/required-headers/required-headers.g
       provide: APP_GUARD,
       useClass: RequireHeaderGuard,
     },
+    ...(process.env.INFISICAL_ENV === 'prod'
+      ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
+      : []),
   ],
 })
 export class AppModule {}

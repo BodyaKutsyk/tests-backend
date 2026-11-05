@@ -46,8 +46,57 @@ export class Helper {
     return userRepo
       .createQueryBuilder('user')
       .innerJoinAndSelect('user.documents', 'document')
-      .limit(1)
       .getOne();
+  }
+
+  async getUsersWithDocuments(limit: number) {
+    const manager = this.dataSource.manager;
+    const userRepo = manager.getRepository(User);
+    const ids = await userRepo
+      .createQueryBuilder('user')
+      .innerJoin('user.documents', 'document')
+      .select('user.id', 'id')
+      .distinct(true)
+      .limit(limit)
+      .getRawMany<{ id: string }>();
+
+    if (ids.length === 0) return [];
+
+    return userRepo
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.documents', 'document')
+      .where('user.id IN (:...ids)', { ids: ids.map(({ id }) => id) })
+      .getMany();
+  }
+
+  async resetDbCounter() {
+    await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}/db-queries/reset`,
+      {
+        method: 'POST',
+      },
+    );
+  }
+
+  async getDbCounter(): Promise<{ count: number }> {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}/db-queries`,
+    );
+
+    return (await response.json()) as { count: number };
+  }
+
+  async getUserTest(userId: string) {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}/tests`,
+      {
+        headers: {
+          'user-id': userId,
+        },
+      },
+    );
+
+    return response.json();
   }
 
   async getJobs(id: string) {

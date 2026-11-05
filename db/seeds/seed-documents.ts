@@ -5,15 +5,15 @@ import type { Client } from 'pg';
 import { from as copyFrom } from 'pg-copy-streams';
 import { escapeCsv } from '../../src/utils/escape-csv.js';
 
-const DOCUMENTS_COUNT = 1_000_000;
+const DOCUMENTS_COUNT = 100_000;
 
 async function* generateDocuments(userIds: string[]) {
   faker.seed(42);
   for (let i = 1; i <= DOCUMENTS_COUNT; i++) {
     const extension = faker.system.fileExt();
-    const fileName = faker.system.commonFileName()
+    const fileName = faker.system.commonFileName();
     const fileMimeType = faker.system.mimeType();
-    const fileSize = faker.number.int({ min: 1024, max: 10 * 1024 * 1024 })
+    const fileSize = faker.number.int({ min: 1024, max: 10 * 1024 * 1024 });
     const fileStorageKey = `uploads/${faker.date.past().toISOString().slice(0, 7)}/${faker.string.uuid()}.${extension}`;
     const userId = faker.helpers.arrayElement(userIds);
     const row = [
@@ -40,7 +40,7 @@ export async function seedDocuments(client: Client) {
       `COPY documents (name, mime_type, size, storage_key, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
     ),
   );
-  const userIds = rows.map(({ id }) => id)
+  const userIds = rows.map(({ id }) => id);
   const usersStream = Readable.from(generateDocuments(userIds));
   await pipeline(usersStream, copyStream);
   await client.query('VACUUM(ANALYSE) documents');
