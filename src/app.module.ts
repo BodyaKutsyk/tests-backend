@@ -17,7 +17,6 @@ import { QuotasModule } from './quotas/quotas.module.js';
 import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
-import { AuthInterceptor } from './interceptors/auth.interceptor.js';
 import { InboxModule } from './inbox/inbox.module.js';
 import { RequireHeaderGuard } from './guards/required-headers/required-headers.guard.js';
 import { RedisQueueModule } from './redis/queue/queue.module.js';
