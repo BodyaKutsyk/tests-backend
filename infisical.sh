@@ -28,6 +28,8 @@ if [[ -f .env ]]; then
   load_env_file .env
 fi
 
+export POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}"
+
 SKIP_VAULT_FLAG="${SKIP_VAULT:-0}"
 IS_CI="${CI:-false}"
 

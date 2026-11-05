@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   MessageEvent,
@@ -9,7 +10,6 @@ import {
   Post,
   Res,
   Sse,
-  Headers,
 } from '@nestjs/common';
 import { TestsService } from './tests.service.js';
 import { CreateTestDto } from './types/tests-request.dto.js';
@@ -17,6 +17,9 @@ import { CreateTestResponseDto } from './types/tests-response.dto.js';
 import { type Response } from 'express';
 import { Observable } from 'rxjs';
 import { GenerationJobsEventService } from '../generation-jobs/generation-jobs-event.service.js';
+import { RequireHeaders } from '../guards/required-headers/required-headers.decorator.js';
+
+const operations = new Map<string, CreateTestResponseDto>();
 
 @Controller('tests')
 export class TestsController {
@@ -25,21 +28,26 @@ export class TestsController {
     private readonly generationJobEventService: GenerationJobsEventService,
   ) {}
 
+  @RequireHeaders('X-Idempotency-Key', 'user-id')
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   async create(
-    @Body() { userId, ...createTestDto }: CreateTestDto,
+    @Body() createTestDto: CreateTestDto,
     @Res({ passthrough: true }) res: Response,
-    @Headers('skip-publish') skipPublish: boolean,
+    @Headers('user-id') userId: string,
+    @Headers('X-Idempotency-Key') idempotencyKey: string,
+    @Headers('skip-publish') skipPublish?: string,
   ): Promise<CreateTestResponseDto> {
+    const operation = operations.get(idempotencyKey);
+    if (operation) return operation;
+
     const job = await this.testsService.create(
       createTestDto,
       userId,
-      skipPublish,
+      skipPublish === 'true',
     );
-
+    operations.set(idempotencyKey, job);
     res.setHeader('Location', `/generation-jobs/${job.id}`);
-
     return job;
   }
 
