@@ -4,6 +4,7 @@ import {
   GENERATION_JOBS_DLQ_QUEUE,
   GENERATION_JOBS_DLX,
   GENERATION_JOBS_EXCHANGE,
+  GENERATION_JOBS_PREFETCH,
   GENERATION_JOBS_ROUTING_KEYS,
 } from '../contracts/generation/constants.js';
 
@@ -33,6 +34,6 @@ export class GenerationJobsTopologyService {
       GENERATION_JOBS_EXCHANGE,
       'generation_jobs.*',
     );
-    await channel.prefetch(4);
+    await channel.prefetch(GENERATION_JOBS_PREFETCH);
   }
 }

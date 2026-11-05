@@ -55,11 +55,12 @@
     "demo:ratelimit:instances": "bash scripts/demo/23/start-rate-limit.sh",
     "demo:ratelimit": "pnpm demo:ratelimit:instances && pnpm infisical pnpm exec tsx scripts/demo/23/rate-limit.ts",
     "demo:queue": "REDIS_QUEUE_HOST=127.0.0.1 pnpm infisical pnpm exec tsx scripts/demo/23/queue.ts",
+    "demo:publish": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-publish.ts",
+    "demo:dlq": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-dlq.ts",
+    "demo:duplicate": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-duplicate.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {
-    "@nest-lab/throttler-storage-redis": "^1.2.0",
-    "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^12.0.1",

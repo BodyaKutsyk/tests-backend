@@ -26,6 +26,7 @@ services:
       REDIS_CACHE_HOST: redis-cache
       REDIS_QUEUE_HOST: redis-queue
       INFISICAL_ENV: prod
+      RABBITMQ_HOST: rabbitmq
     extra_hosts: *infisical-hosts
     ports:
       - "${API_PORT}:${API_PORT}"

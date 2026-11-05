@@ -8,7 +8,6 @@ import {
 import { ChannelModel, ConfirmChannel, connect } from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env.schema.js';
-import fs from 'node:fs';
 
 interface PublishProps<T> {
   exchange: string;
@@ -28,10 +27,7 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    const isDocker = fs.existsSync('/.dockerenv');
-    const host = isDocker
-      ? this.configService.get('RABBITMQ_HOST')
-      : '127.0.0.1';
+    const host = this.configService.get('RABBITMQ_HOST');
     const port = this.configService.get('RABBITMQ_PORT');
     const user = this.configService.get('RABBITMQ_USER');
     const password = this.configService.get('RABBITMQ_PASSWORD');

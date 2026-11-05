@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   MessageEvent,
@@ -9,7 +10,6 @@ import {
   Post,
   Res,
   Sse,
-  Headers,
   Get,
 } from '@nestjs/common';
 import { TestsService } from './tests.service.js';
@@ -38,19 +38,18 @@ export class TestsController {
     @Res({ passthrough: true }) res: Response,
     @Headers('user-id') userId: string,
     @Headers('X-Idempotency-Key') idempotencyKey: string,
+    @Headers('skip-publish') skipPublish?: string,
   ): Promise<CreateTestResponseDto> {
-    // TODO: persist state in Redis
-    // const isExists = await this.idempotencyService.check(idempotencyKey)
     const operation = operations.get(idempotencyKey);
-    if (operation) {
-      return operation;
-    }
+    if (operation) return operation;
 
-    const job = await this.testsService.create(createTestDto, userId);
-
+    const job = await this.testsService.create(
+      createTestDto,
+      userId,
+      skipPublish === 'true',
+    );
     operations.set(idempotencyKey, job);
     res.setHeader('Location', `/generation-jobs/${job.id}`);
-
     return job;
   }
 
@@ -84,4 +83,3 @@ export class TestsController {
     return this.testsService.getAllByUserId(userId);
   }
 }
-// b4cd1aed-7654-4e00-a8b6-1bf9b5dcae18
