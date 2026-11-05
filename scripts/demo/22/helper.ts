@@ -52,10 +52,20 @@ export class Helper {
   async getUsersWithDocuments(limit: number) {
     const manager = this.dataSource.manager;
     const userRepo = manager.getRepository(User);
+    const ids = await userRepo
+      .createQueryBuilder('user')
+      .innerJoin('user.documents', 'document')
+      .select('user.id', 'id')
+      .distinct(true)
+      .limit(limit)
+      .getRawMany<{ id: string }>();
+
+    if (ids.length === 0) return [];
+
     return userRepo
       .createQueryBuilder('user')
       .innerJoinAndSelect('user.documents', 'document')
-      .take(limit)
+      .where('user.id IN (:...ids)', { ids: ids.map(({ id }) => id) })
       .getMany();
   }
 

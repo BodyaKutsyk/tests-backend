@@ -1,11 +1,7 @@
 import { Helper } from '../22/helper.js';
-import { randomUUID } from 'crypto';
 import { Redis } from 'ioredis';
 import { getRedisSessionKey } from '../../../src/contracts/session/constants.js';
-import { User } from '../../../src/entities/user.js';
 import { asyncTimeout } from '../../../src/utils/async-timeout.js';
-
-const USERS_AMOUNT = 20;
 
 async function login({
   email,
@@ -15,7 +11,7 @@ async function login({
   password: string;
 }): Promise<{ sessionId: string }> {
   const response = await fetch(
-    `http://localhost:${Number(process.env.API_PORT || 3000)}/auth/login`,
+    `http://localhost:${Number(process.env.API_PORT)}/auth/login`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -23,12 +19,15 @@ async function login({
     },
   );
 
+  if (!response.ok) {
+    throw new Error(`Login failed with HTTP ${response.status}`);
+  }
   return (await response.json()) as { sessionId: string };
 }
 
-async function getUsers(sessionId: string): Promise<User[]> {
+async function getUsers(sessionId: string): Promise<void> {
   const response = await fetch(
-    `http://localhost:${Number(process.env.API_PORT || 3000)}/users`,
+    `http://localhost:${Number(process.env.API_PORT)}/users`,
     {
       headers: {
         'Content-Type': 'application/json',
@@ -37,7 +36,9 @@ async function getUsers(sessionId: string): Promise<User[]> {
     },
   );
 
-  return (await response.json()) as User[];
+  if (!response.ok) {
+    throw new Error(`Protected request failed with HTTP ${response.status}`);
+  }
 }
 
 async function main() {
@@ -47,55 +48,41 @@ async function main() {
     host: process.env.REDIS_QUEUE_HOST,
     password: process.env.REDIS_PASSWORD,
   });
-  await helper.dataSource.initialize();
+  try {
+    await helper.dataSource.initialize();
+    const [user] = await helper.getUsersWithDocuments(1);
+    if (!user) throw new Error('Seeded user was not found');
 
-  const users = await helper.getUsersWithDocuments(USERS_AMOUNT);
-  const sessions = await Promise.allSettled(
-    users.map(({ email }) =>
-      login({ email, password: randomUUID().slice(0, 20) }),
-    ),
-  );
-  const requests = sessions.filter((req) => req.status === 'fulfilled').length;
-  const ttlsBefore: number[] = [];
+    const { sessionId } = await login({
+      email: user.email,
+      password: 'Test123456',
+    });
+    const sessionKey = getRedisSessionKey(sessionId);
+    const inRedis = Number((await redisQueue.exists(sessionKey)) === 1);
+    let requests = 0;
+    await getUsers(sessionId);
+    requests++;
+    await asyncTimeout(3000);
+    const ttlBefore = await redisQueue.pttl(sessionKey);
+    await getUsers(sessionId);
+    requests++;
+    const ttlAfter = await redisQueue.pttl(sessionKey);
+    await getUsers(sessionId);
+    requests++;
 
-  const sessionsInRedis = await Promise.all(
-    sessions.map(async (result) => {
-      if (result.status !== 'fulfilled' || !result.value.sessionId) {
-        return Promise.resolve(null);
-      }
-
-      const ttl = await redisQueue.pttl(
-        getRedisSessionKey(result.value.sessionId),
-      );
-      ttlsBefore.push(ttl);
-      return redisQueue.get(getRedisSessionKey(result.value.sessionId));
-    }),
-  );
-
-  await asyncTimeout(3000);
-
-  const ttlsAfter = await Promise.all(
-    sessions.map(async (result) => {
-      if (result.status !== 'fulfilled' || !result.value.sessionId) {
-        return Promise.resolve(0);
-      }
-
-      await getUsers(result.value.sessionId);
-      return redisQueue.pttl(getRedisSessionKey(result.value.sessionId));
-    }),
-  );
-
-  console.log(`requests: ${requests}`);
-  console.log(`sessions: ${sessions.length}`);
-  console.log(`in-redis: ${sessionsInRedis.length}`);
-  console.log(`user ttl before protected call: ${ttlsBefore[0]}`);
-  console.log(`user ttl after protected call: ${ttlsAfter[0]}`);
-
-  process.exit(
-    Number(
-      !Boolean(ttlsBefore[0] < ttlsAfter[0] && requests === sessions.length),
-    ),
-  );
+    const ttlRenewed = Number(ttlAfter > ttlBefore);
+    console.log(`requests=${requests}`);
+    console.log('sessions=1');
+    console.log(`in-redis=${inRedis}`);
+    console.log(`ttl-renewed=${ttlRenewed}`);
+    process.exitCode = Number(inRedis !== 1 || ttlRenewed !== 1);
+  } catch (e) {
+    console.error(e);
+    process.exitCode = 1;
+  } finally {
+    redisQueue.disconnect();
+    if (helper.dataSource.isInitialized) await helper.dataSource.destroy();
+  }
 }
 
 await main();

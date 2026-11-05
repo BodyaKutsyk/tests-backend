@@ -50,8 +50,9 @@
     "demo:crash-relay": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-relay.ts",
     "demo:cache": "REDIS_CACHE_HOST=127.0.0.1 pnpm infisical pnpm exec tsx scripts/demo/23/cache.ts",
     "demo:session": "REDIS_QUEUE_HOST=127.0.0.1 pnpm infisical pnpm exec tsx scripts/demo/23/session.ts",
-    "demo:ratelimit:instances": "pnpm infisical docker compose --profile rate-limit-demo up -d --build --force-recreate --wait api-rate-a api-rate-b",
+    "demo:ratelimit:instances": "bash scripts/demo/23/start-rate-limit.sh",
     "demo:ratelimit": "pnpm demo:ratelimit:instances && pnpm infisical pnpm exec tsx scripts/demo/23/rate-limit.ts",
+    "demo:queue": "REDIS_QUEUE_HOST=127.0.0.1 pnpm infisical pnpm exec tsx scripts/demo/23/queue.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {
