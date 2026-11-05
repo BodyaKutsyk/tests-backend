@@ -50,6 +50,9 @@
     "demo:outbox": "pnpm infisical pnpm exec tsx scripts/demo/22/outbox.ts",
     "demo:crash-write": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-write.ts",
     "demo:crash-relay": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-relay.ts",
+    "demo:publish": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-publish.ts",
+    "demo:dlq": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-dlq.ts",
+    "demo:duplicate": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-duplicate.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {

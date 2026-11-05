@@ -21,6 +21,7 @@ export class TestsService {
   async create(
     { files, questionType, questionCount }: CreateTestDto,
     userId: string,
+    skipPublish = false,
   ): Promise<CreateTestResponseDto> {
     const documents = [...new Set(files)].map((id) => ({ id }));
     const generationJobPayload = this.generationJobsRepo.create({
@@ -31,17 +32,12 @@ export class TestsService {
     });
     const generationJob = await this.generationJobsRepo.manager.transaction(
       async (manager) => {
-        const generationJob = await manager.save(
-          GenerationJob,
-          generationJobPayload,
-        );
-        await this.testsPublisher.testJobCreated(generationJob, manager);
-
-        if (generationJobPayload.questionCount === BRAKE_TRANSACTION_NUM) {
+        const savedJob = await manager.save(GenerationJob, generationJobPayload);
+        if (!skipPublish) await this.testsPublisher.testJobCreated(savedJob, manager);
+        if (questionCount === BRAKE_TRANSACTION_NUM) {
           throw new Error('second demo boom');
         }
-
-        return generationJob;
+        return savedJob;
       },
     );
 
