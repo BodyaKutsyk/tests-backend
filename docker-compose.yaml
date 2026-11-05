@@ -14,26 +14,24 @@ include:
 services:
   api:
     image: api_image
-
     container_name: api_prod
-
     build:
       context: .
       target: prod
-
     environment:
       API_PORT: ${API_PORT}
       <<: *infisical-env
       POSTGRES_HOST: pg_bouncer
       INFISICAL_ENV: prod
-
+      RABBITMQ_HOST: rabbitmq
     extra_hosts: *infisical-hosts
-
     ports:
       - "${API_PORT}:${API_PORT}"
 
     depends_on:
-      db:
+      pg_bouncer:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     secrets:
       - db_password
@@ -137,6 +135,24 @@ services:
       - restore
     volumes:
       - ./backups:/backups:ro
+  rabbitmq:
+    image: rabbitmq:4.2.9-management
+    container_name: rabbitmq
+    hostname: ${RABBITMQ_HOST}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
 
 secrets:
   db_password:
@@ -145,3 +161,5 @@ secrets:
 volumes:
   postgres_data:
   restore_drill_data:
+  rabbitmq-lib:
+  rabbitmq-log:

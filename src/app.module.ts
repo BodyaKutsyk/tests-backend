@@ -15,6 +15,7 @@ import { TestsModule } from './tests/tests.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { QuotasModule } from './quotas/quotas.module.js';
 import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
+import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js
         };
       },
     }),
+    RabbitMqModule,
     UsersModule,
     GenerationJobModule,
     TestsModule,
