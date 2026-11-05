@@ -1,12 +1,11 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Outbox } from '../entities/outbox.js';
-import { Repository, IsNull, EntityManager } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
-import { GenerationJob } from '../entities/generation-job.js';
 import { BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE } from '../utils/demos.js';
 
-const RELAY_WORKER_INTERVAL = 1500;
+const RELAY_WORKER_INTERVAL = 10_000;
 const JOBS_PER_CALL = 20;
 
 @Injectable()

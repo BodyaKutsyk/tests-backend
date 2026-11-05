@@ -46,8 +46,47 @@ export class Helper {
     return userRepo
       .createQueryBuilder('user')
       .innerJoinAndSelect('user.documents', 'document')
-      .limit(1)
       .getOne();
+  }
+
+  async getUsersWithDocuments(limit: number) {
+    const manager = this.dataSource.manager;
+    const userRepo = manager.getRepository(User);
+    return userRepo
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.documents', 'document')
+      .take(limit)
+      .getMany();
+  }
+
+  async resetDbCounter() {
+    await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}/db-queries/reset`,
+      {
+        method: 'POST',
+      },
+    );
+  }
+
+  async getDbCounter(): Promise<{ count: number }> {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}/db-queries`,
+    );
+
+    return (await response.json()) as { count: number };
+  }
+
+  async getUserTest(userId: string) {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}/tests`,
+      {
+        headers: {
+          'user-id': userId,
+        },
+      },
+    );
+
+    return response.json();
   }
 
   async getJobs(id: string) {

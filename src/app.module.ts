@@ -29,6 +29,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DocumentsGarbageCollectorModule } from './documents-garbage-collector/documents-garbage-collector.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { QueryLogger } from './utils/query-logger.js';
+import { DbCounterModule } from './db/db-counter.module.js';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { AuthModule } from './auth/auth.module.js';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<Env, true>) => {
         const DB_PASSWORD_FILE = configService.get('POSTGRES_PASSWORD_FILE');
+        const logger = new QueryLogger();
+        const enableLogger = Boolean(process.env.INFISICAL_ENV === 'dev');
 
         return {
           type: 'postgres',
@@ -51,6 +55,8 @@ import { AuthModule } from './auth/auth.module.js';
           database: configService.get('POSTGRES_DB'),
           namingStrategy: new SnakeNamingStrategy(),
           entities: [entitiesPath],
+          logger,
+          logging: enableLogger ? ['query'] : false,
         };
       },
     }),
@@ -95,6 +101,7 @@ import { AuthModule } from './auth/auth.module.js';
     RedisCacheModule,
     DocumentsGarbageCollectorModule,
     AuthModule,
+    DbCounterModule,
   ],
   controllers: [AppController],
   providers: [
@@ -115,10 +122,9 @@ import { AuthModule } from './auth/auth.module.js';
       provide: APP_GUARD,
       useClass: RequireHeaderGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.INFISICAL_ENV === 'prod'
+      ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
+      : []),
   ],
 })
 export class AppModule {}

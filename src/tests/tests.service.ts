@@ -88,7 +88,7 @@ export class TestsService {
         await this.redisCacheService.set(
           getRedisUserTestsCacheKey(userId),
           tests,
-          jitter(300, 0.2),
+          jitter(300, 0.4),
         );
         return tests;
       } finally {
@@ -100,8 +100,8 @@ export class TestsService {
     } else {
       return (
         (await this.redisCacheService.waitAndRead<Test[]>(
-          lockKey,
-          uniqToken,
+          getRedisUserTestsCacheKey(userId),
+          getRedisUserTestsLockKey(userId),
         )) ?? []
       );
     }

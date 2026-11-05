@@ -79,7 +79,7 @@ export class RedisCacheService implements OnModuleDestroy {
         return cached;
       }
 
-      const lockExists = await this.get(lockKey);
+      const lockExists = await this.redisCacheClient.exists(lockKey);
 
       if (lockExists === 0) {
         return this.get<T>(cacheKey);

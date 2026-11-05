@@ -48,6 +48,7 @@
     "demo:outbox": "pnpm infisical pnpm exec tsx scripts/demo/22/outbox.ts",
     "demo:crash-write": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-write.ts",
     "demo:crash-relay": "pnpm infisical pnpm exec tsx scripts/demo/22/crash-relay.ts",
+    "demo:cache": "REDIS_CACHE_HOST=127.0.0.1 pnpm infisical pnpm exec tsx scripts/demo/23/cache.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {
