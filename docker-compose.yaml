@@ -168,7 +168,7 @@ services:
       --maxmemory 512mb
       --maxmemory-policy allkeys-lru
     ports:
-      - "${REDIS_CACHE_PORT}:6379"
+      - "${REDIS_CACHE_PORT}:${REDIS_CACHE_PORT}"
     volumes:
       - redis-cache-data:/data
     healthcheck:
@@ -187,7 +187,7 @@ services:
     container_name: redis-queue
     restart: always
     ports:
-      - "${REDIS_QUEUE_PORT}:6379"
+      - "${REDIS_QUEUE_PORT}:${REDIS_QUEUE_PORT}"
     volumes:
       - redis-queue-data:/data
     command:

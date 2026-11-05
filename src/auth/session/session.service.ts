@@ -4,6 +4,7 @@ import { UnauthorizedProblem } from '../../exceptions/problem-errors.js';
 import { VALIDATE_AND_TOUCH } from '../constants.js';
 import { randomUUID } from 'crypto';
 import { REDIS_QUEUE_CLIENT } from '../../redis/constants.js';
+import { getRedisSessionKey } from '../../contracts/session/constants.js';
 
 interface AuthSession {
   userId: string;
@@ -47,7 +48,7 @@ export class SessionService {
     sId: string,
     refreshHash: string,
   ): Promise<void> {
-    const key = `auth:session:${sId}`;
+    const key = getRedisSessionKey(sId);
     const now = Date.now();
     const session: AuthSession = {
       userId,
