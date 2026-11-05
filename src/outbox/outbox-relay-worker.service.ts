@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Outbox } from '../entities/outbox.js';
 import { Repository, EntityManager, Not, In } from 'typeorm';
@@ -9,25 +14,44 @@ const RELAY_WORKER_INTERVAL = 1500;
 const JOBS_PER_CALL = 20;
 
 @Injectable()
-export class OutboxRelayWorkerService implements OnApplicationBootstrap {
+export class OutboxRelayWorkerService
+  implements OnApplicationBootstrap, OnModuleDestroy
+{
   constructor(
     @InjectRepository(Outbox)
     private readonly outboxRepository: Repository<Outbox>,
     private readonly rabbitMQService: RabbitMqService,
   ) {}
   private readonly logger = new Logger(this.constructor.name);
+  private stopping = false;
+  private timer?: ReturnType<typeof setTimeout>;
+  private currentRun?: Promise<void>;
 
   async onApplicationBootstrap() {
-    const run = async () => {
-      try {
-        await this.processJobs(JOBS_PER_CALL);
-      } catch (e) {
-        this.logger.error('Error in outbox worker', e);
-      } finally {
-        setTimeout(run, RELAY_WORKER_INTERVAL);
-      }
-    };
-    await run();
+    await this.run();
+  }
+
+  private async run(): Promise<void> {
+    if (this.stopping) return;
+
+    this.currentRun = this.processJobs(JOBS_PER_CALL)
+      .catch((error: unknown) => {
+        this.logger.error('Error in outbox worker', error);
+      })
+      .finally(() => {
+        this.currentRun = undefined;
+        if (!this.stopping) {
+          this.timer = setTimeout(() => void this.run(), RELAY_WORKER_INTERVAL);
+        }
+      });
+
+    await this.currentRun;
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    this.stopping = true;
+    if (this.timer) clearTimeout(this.timer);
+    await this.currentRun;
   }
 
   private async getPending(limit: number, manager: EntityManager) {
