@@ -57,5 +57,18 @@ services:
       timeout: 5s
       retries: 10
 
+  redis-queue:
+    image: redis:7.2-alpine
+    ports:
+      - "${REDIS_QUEUE_PORT}:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-volume:

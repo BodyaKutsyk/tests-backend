@@ -4,6 +4,7 @@ on: [push]
 jobs:
   contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       PACT_BROKER_PORT: 9292
       PACT_BROKER_DB_USER: pact
@@ -24,6 +25,9 @@ jobs:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: pact
       RABBITMQ_PASSWORD: pact
+      REDIS_QUEUE_HOST: 127.0.0.1
+      REDIS_QUEUE_PORT: 6379
+      REDIS_PASSWORD: pact
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

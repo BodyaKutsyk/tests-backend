@@ -168,7 +168,7 @@ The project uses Jest. Run `pnpm test` for unit tests, `pnpm test:integration` f
 
 Pact uses consumer-driven contracts: the consumer test records the frontend's expected API behavior, then the provider verifier checks the API against that contract. Provider verification seeds its disposable database for the declared provider state and publishes the verification result to the broker on every run. The broker stores contract versions separately from the disposable test database, so test data can be safely reset without losing contract history or verification results.
 
-Start the broker and its PostgreSQL database:
+Start the broker, PostgreSQL, RabbitMQ, and Redis dependencies:
 
 ```bash
 pnpm infisical docker compose -f docker-compose.pact.yml up -d --wait
