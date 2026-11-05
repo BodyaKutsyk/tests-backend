@@ -27,6 +27,9 @@ describe('API Contract Testing', () => {
           builder.query({
             limit: '10',
           });
+          builder.headers({
+            Authorization: 'Bearer 123',
+          });
         })
         .willRespondWith(200, (builder) => {
           builder.headers({
