@@ -21,6 +21,7 @@ COPY .  .
 RUN pnpm build
 
 FROM base AS build
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm build

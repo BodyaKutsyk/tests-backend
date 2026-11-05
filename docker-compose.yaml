@@ -212,6 +212,64 @@ services:
       retries: 3
       start_period: 5s
 
+  api-rate-a:
+    profiles: ["rate-limit-demo"]
+    build:
+      context: .
+      target: prod
+    environment:
+      <<: *infisical-env
+      POSTGRES_HOST: pg_bouncer
+      RABBITMQ_HOST: rabbitmq
+      REDIS_CACHE_HOST: redis-cache
+      REDIS_QUEUE_HOST: redis-queue
+      INFISICAL_ENV: prod
+    extra_hosts: *infisical-hosts
+    depends_on:
+      pg_bouncer:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
+    secrets:
+      - db_password
+    ports:
+      - "3001:5137"
+    healthcheck:
+      test: [ "NONE" ]
+
+  api-rate-b:
+    profiles: ["rate-limit-demo"]
+    build:
+      context: .
+      target: prod
+    environment:
+      <<: *infisical-env
+      POSTGRES_HOST: pg_bouncer
+      RABBITMQ_HOST: rabbitmq
+      REDIS_CACHE_HOST: redis-cache
+      REDIS_QUEUE_HOST: redis-queue
+      INFISICAL_ENV: prod
+    extra_hosts: *infisical-hosts
+    depends_on:
+      pg_bouncer:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
+    secrets:
+      - db_password
+    ports:
+      - "3002:5137"
+    healthcheck:
+      test: ["NONE"]
+
 secrets:
   db_password:
     file: ./secrets/db_password
