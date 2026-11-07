@@ -8,15 +8,21 @@ import {
   UploadedFiles,
   ParseFilePipeBuilder,
   Headers,
+  Body,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { DocumentsService } from './documents.service.js';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../pipes/file-validation.pipe.js';
-import { UploadFilesResponseDto } from './types/document.dto.js';
+import {
+  DeleteFilesPayloadDto,
+  UploadFilesResponseDto,
+} from './types/document.dto.js';
 
 @Controller('files')
 export class DocumentsController {
-  constructor(private readonly filesService: DocumentsService) {}
+  constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
   @UseInterceptors(
@@ -36,26 +42,22 @@ export class DocumentsController {
     files: Express.Multer.File[],
     @Headers('user-id') userId: string,
   ): Promise<UploadFilesResponseDto> {
-    return this.filesService.upload(files, userId);
+    return this.documentsService.upload(files, userId);
   }
 
   @Get()
   findAll() {
-    return this.filesService.findAll();
+    return this.documentsService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.filesService.findOne(+id);
+    return this.documentsService.findOne(+id);
   }
-  //
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
-  //   return this.filesService.update(+id, updateFileDto);
-  // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.filesService.remove(+id);
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Delete()
+  remove(@Body() { documentIds }: DeleteFilesPayloadDto) {
+    return this.documentsService.remove(documentIds);
   }
 }

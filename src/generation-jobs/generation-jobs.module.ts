@@ -9,6 +9,7 @@ import { GenerationJobsConsumer } from './generation-jobs.consumer.js';
 import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { InboxModule } from '../inbox/inbox.module.js';
+import { RedisCacheModule } from '../redis/cache/cache.module.js';
 import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js';
 import { GenerationJobsService } from './generation-jobs.service.js';
 
@@ -16,6 +17,7 @@ import { GenerationJobsService } from './generation-jobs.service.js';
   imports: [
     RabbitMqModule,
     InboxModule,
+    RedisCacheModule,
     TypeOrmModule.forFeature([GenerationJob]),
   ],
   controllers: [],

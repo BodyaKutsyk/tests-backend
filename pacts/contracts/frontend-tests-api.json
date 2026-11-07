@@ -12,6 +12,11 @@
         }
       ],
       "request": {
+        "headers": {
+          "Authorization": [
+            "Bearer 123"
+          ]
+        },
         "method": "GET",
         "path": "/users",
         "query": {

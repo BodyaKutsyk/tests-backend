@@ -1,0 +1,35 @@
+x-grading-api-env: &grading-api-env
+  API_PORT: 3000
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_DB: ${POSTGRES_DB}
+  POSTGRES_PORT: 5432
+  POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: ${RABBITMQ_USER}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+  REDIS_CACHE_PORT: ${REDIS_CACHE_PORT}
+  REDIS_QUEUE_PORT: ${REDIS_QUEUE_PORT}
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+services:
+  api:
+    command: ["pnpm", "start:prod"]
+    environment:
+      <<: *grading-api-env
+      INFISICAL_ENV: dev
+
+  api-rate-a:
+    command: ["pnpm", "start:prod"]
+    environment:
+      <<: *grading-api-env
+      INFISICAL_ENV: prod
+    ports: !override
+      - "3001:3000"
+
+  api-rate-b:
+    command: ["pnpm", "start:prod"]
+    environment:
+      <<: *grading-api-env
+      INFISICAL_ENV: prod
+    ports: !override
+      - "3002:3000"

@@ -9,6 +9,7 @@ import { TestsGateway } from './tests.gateway.js';
 import { TestsPublisher } from './tests.publisher.js';
 import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
 import { OutboxModule } from '../outbox/outbox.module.js';
+import { RedisCacheModule } from '../redis/cache/cache.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OutboxModule } from '../outbox/outbox.module.js';
     TypeOrmModule.forFeature([GenerationJob, Test]),
     RabbitMqModule,
     OutboxModule,
+    RedisCacheModule,
   ],
   controllers: [TestsController],
   providers: [TestsService, TestsGateway, TestsPublisher],

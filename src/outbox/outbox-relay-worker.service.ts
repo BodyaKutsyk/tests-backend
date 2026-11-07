@@ -10,7 +10,7 @@ import { Repository, EntityManager, Not, In } from 'typeorm';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
 import { BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE } from '../utils/demos.js';
 
-const RELAY_WORKER_INTERVAL = 1500;
+const RELAY_WORKER_INTERVAL = 10_000;
 const JOBS_PER_CALL = 20;
 
 @Injectable()

@@ -43,6 +43,12 @@ const config: Config = {
     {
       ...sharedConfig,
       displayName: 'provider',
+      moduleNameMapper: {
+        ...sharedConfig.moduleNameMapper,
+        '^@nestjs/throttler$': '<rootDir>/test/mocks/throttler.ts',
+        '^@nest-lab/throttler-storage-redis$':
+          '<rootDir>/test/mocks/throttler-storage-redis.ts',
+      },
       testTimeout: 20_000,
       testMatch: ['<rootDir>/**/*.verification.pact-spec.ts'],
     },
