@@ -6,20 +6,28 @@ import { Document } from './document.js';
 import { GenerationJob } from './generation-job.js';
 import { Quota } from './quota.js';
 
+enum Role {
+  Customer = 'customer',
+  Admin = 'admin',
+}
+
 @Index(['createdAt'])
 @Entity('users')
 export class User extends BaseWithDeleted {
   @Column({ unique: true, type: 'varchar', length: 254 })
   email: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   firstName: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   lastName: string;
 
   @Column({ type: 'varchar', length: 150, select: false })
   passwordHash: string;
+
+  @Column({ type: 'enum', default: Role.Customer, enum: Role })
+  role: Role;
 
   @OneToMany(() => Test, (test) => test.user)
   tests: Relation<Test[]>;

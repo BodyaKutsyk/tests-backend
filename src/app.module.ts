@@ -30,6 +30,7 @@ import { DocumentsGarbageCollectorModule } from './documents-garbage-collector/d
 import { AuthModule } from './auth/auth.module.js';
 import { QueryLogger } from './utils/query-logger.js';
 import { DbCounterModule } from './db/db-counter.module.js';
+import { AuthenticationModule } from '@nestjs/authentication';
 
 @Module({
   imports: [
@@ -88,7 +89,24 @@ import { DbCounterModule } from './db/db-counter.module.js';
       }),
     }),
     ScheduleModule.forRoot(),
-    OutboxModule,
+    AuthenticationModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        accessToken: {
+          key: configService.get('JWT_PRIVATE_KEY'),
+          issuer: 'test-generator',
+          audience: 'test-generator-api',
+          signOptions: {
+            algorithm: 'RS256',
+            expiresIn: '5m',
+          },
+          verifyOptions: {
+            secretOrPublicKey: configService.get('JWT_PUBLIC_KEY'),
+            algorithms: ['RS256'],
+          },
+        },
+      }),
+    }),
     InboxModule,
     RabbitMqModule,
     UsersModule,

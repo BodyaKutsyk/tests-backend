@@ -1,25 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { SessionService } from './session/session.service.js';
-import { User } from '../entities/user.js';
 import { randomUUID } from 'crypto';
 import { hash } from 'node:crypto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { NotFoundProblem } from '../exceptions/problem-errors.js';
-import { LoginRequestDto } from './types/request.dto.js';
+import { SignInRequestDto } from './types/request.dto.js';
+import { UsersService } from '../users/users.service.js';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly sessionService: SessionService,
-    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private readonly usersService: UsersService,
   ) {}
-  async login(dto: LoginRequestDto) {
-    const user = await this.userRepository.findOneBy({ email: dto.email });
+  async login({ email }: SignInRequestDto) {
+    const user = await this.usersService.getByEmail(email);
 
     if (!user) {
       throw new NotFoundProblem({
-        detail: `User with email: ${dto.email} doesn't exist`,
+        detail: `User with email: ${email} doesn't exist`,
       });
     }
 

@@ -232,6 +232,8 @@ The broker reported that all required verification results were published and su
 | `REDIS_CACHE_HOST`        | Host used to connect to the Redis Cache                                          |
 | `REDIS_CACHE_PORT`        | Port used to connect to the Redis Cache                                          |
 | `REDIS_PASSWORD`          | Password for the Redis                                                           | 
+| `JWT_PUBLIC_KEY`          | Secret used to verify and validate JWT                                           |
+| `JWT_PRIVATE_KEY`         | Secret used to create and sign JWT                                               |
 
 ### How to start
 

@@ -6,7 +6,6 @@ import { CursorDto } from '../types/cursor.dto.js';
 import { encodeCursor } from '../utils/encode-cursor.js';
 import { PaginatedResponse } from '../types/response.js';
 import { CreateUserDto } from './types/user.dto.js';
-import { encodeBase64 } from '../utils/base64.js';
 import {
   ConflictProblem,
   NotFoundProblem,
@@ -78,7 +77,6 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const { password, ...parsed } = createUserDto;
     const basicStorageQuota: Partial<Quota> = {
       maxLimit: 104_857_600,
       quotaType: QuotaType.Storage,
@@ -88,12 +86,9 @@ export class UsersService {
       quotaType: QuotaType.Generation,
     };
 
-    // TODO: encoded like that before adding auth
-    const passwordHash = encodeBase64(password);
     try {
       return await this.usersRepo.save({
-        ...parsed,
-        passwordHash,
+        ...createUserDto,
         quotas: [basicStorageQuota, basicGenerationQuota],
       });
     } catch (error) {
@@ -113,11 +108,34 @@ export class UsersService {
     id: string,
     updateUserDto: Partial<CreateUserDto>,
   ): Promise<User> {
-    const { password, ...parsed } = updateUserDto;
+    const { passwordHash, ...parsed } = updateUserDto;
     return this.usersRepo.save({ id, ...parsed });
   }
 
   async delete(id: string): Promise<void> {
     await this.usersRepo.softDelete(id);
+  }
+
+  async getCredentials(
+    email: string,
+  ): Promise<Promise<{ user: User; passwordHash: string }> | null> {
+    const user = await this.usersRepo.findOne({
+      where: { email },
+      select: { passwordHash: true },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return { user, passwordHash: user.passwordHash };
+  }
+
+  async getByEmail(email: string) {
+    return this.usersRepo.findOneBy({ email });
+  }
+
+  async updatePasswordHash(id: string, passwordHash: string) {
+    await this.usersRepo.update({ passwordHash }, { id });
   }
 }
