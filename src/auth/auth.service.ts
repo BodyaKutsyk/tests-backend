@@ -1,35 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { SessionService } from './session/session.service.js';
 import { randomUUID } from 'crypto';
-import { hash } from 'node:crypto';
-import { NotFoundProblem } from '../exceptions/problem-errors.js';
-import { SignInRequestDto } from './types/request.dto.js';
-import { UsersService } from '../users/users.service.js';
+import { TokenService } from '@nestjs/authentication';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly sessionService: SessionService,
-    private readonly usersService: UsersService,
-  ) {}
-  async login({ email }: SignInRequestDto) {
-    const user = await this.usersService.getByEmail(email);
+  constructor(private readonly tokenService: TokenService) {}
 
-    if (!user) {
-      throw new NotFoundProblem({
-        detail: `User with email: ${email} doesn't exist`,
-      });
-    }
+  async signIn(userId: string) {
+    const sid = randomUUID();
 
-    const sessionId = randomUUID();
-    const refreshToken = randomUUID();
-    const accessToken = randomUUID();
-    await this.sessionService.create(
-      user.id,
-      sessionId,
-      hash('sha256', refreshToken),
-    );
+    return this.tokenService.issue(userId, {
+      method: 'password',
+      claims: { sid },
+    });
+  }
 
-    return { accessToken, refreshToken, sessionId };
+  async signUp(userId: string) {
+    const sid = randomUUID();
+
+    return this.tokenService.issue(userId, {
+      method: 'password',
+      claims: { sid },
+    });
+  }
+
+  async refresh(refreshToken: string) {
+    return this.tokenService.refresh(refreshToken);
   }
 }

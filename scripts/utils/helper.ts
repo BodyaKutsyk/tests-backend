@@ -62,6 +62,26 @@ export class Helper {
     });
   }
 
+  async post<T>(path: string, data: unknown): Promise<T> {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(JSON.stringify(error));
+    }
+
+    return (await response.json()) as T;
+  }
+
   async publishRabbitMQ<T>({ exchange, routingKey, payload }: PublishProps<T>) {
     if (!this.channel) {
       throw new Error('Channel is not available');
