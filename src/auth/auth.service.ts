@@ -27,4 +27,8 @@ export class AuthService {
   async refresh(refreshToken: string) {
     return this.tokenService.refresh(refreshToken);
   }
+
+  async signOut(refreshToken: string) {
+    await this.tokenService.revoke(refreshToken);
+  }
 }

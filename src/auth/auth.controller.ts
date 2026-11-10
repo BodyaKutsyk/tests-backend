@@ -40,4 +40,10 @@ export class AuthController {
   async refresh(@Body('refreshToken') refreshToken: string) {
     return this.authService.refresh(refreshToken);
   }
+
+  @HttpCode(204)
+  @Post('sign-out')
+  async signOut(@Body('refreshToken') refreshToken: string) {
+    return this.authService.signOut(refreshToken);
+  }
 }
