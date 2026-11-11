@@ -18,6 +18,8 @@ import {
   SAVE_REFRESH_TOKEN,
   VALIDATE_AND_TOUCH_FAMILY,
 } from './constants.js';
+import { Role } from '../entities/user.js';
+import { UsersService } from '../users/users.service.js';
 
 interface RefreshFamilyRecord {
   userId: string;
@@ -25,6 +27,7 @@ interface RefreshFamilyRecord {
   revoked: boolean;
   lastActiveAt: number;
   familyExpiresAt: number;
+  role: Role;
 }
 
 @Injectable()
@@ -34,6 +37,7 @@ export class RedisAuthStore implements RefreshTokenStore {
   constructor(
     @Inject(REDIS_QUEUE_CLIENT) private readonly redisQueueClient: Redis,
     storage: AuthenticationStorage,
+    private readonly userService: UsersService,
   ) {
     storage.registerSource({
       refreshTokens: this,
@@ -80,6 +84,12 @@ export class RedisAuthStore implements RefreshTokenStore {
     const sid = String(record.claims?.sid ?? '');
     const ttlMs = record.familyExpiresAt.getTime() - Date.now();
 
+    const user = await this.userService.getById(record.userId);
+
+    if (!user) {
+      return undefined;
+    }
+
     const result = Number(
       await this.redisQueueClient.eval(
         SAVE_REFRESH_TOKEN,
@@ -90,6 +100,7 @@ export class RedisAuthStore implements RefreshTokenStore {
         getRedisSidFamilyKey(sid),
         JSON.stringify({
           userId: record.userId,
+          role: user.role,
           sid,
           revoked: false,
           lastActiveAt: Date.now(),

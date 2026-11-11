@@ -62,7 +62,30 @@ export class Helper {
     });
   }
 
-  async post<T>(path: string, data: unknown): Promise<T> {
+  async get<T>(path: string, headers: Record<string, string> = {}) {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(JSON.stringify(error));
+    }
+
+    return (await response.json()) as T;
+  }
+
+  async post<T>(
+    path: string,
+    data: unknown,
+    headers: Record<string, string> = {},
+  ): Promise<T> {
     const response = await fetch(
       `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
       {
@@ -70,6 +93,7 @@ export class Helper {
         body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json',
+          ...headers,
         },
       },
     );

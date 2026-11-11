@@ -6,7 +6,7 @@ import { Document } from './document.js';
 import { GenerationJob } from './generation-job.js';
 import { Quota } from './quota.js';
 
-enum Role {
+export enum Role {
   Customer = 'customer',
   Admin = 'admin',
 }

@@ -11,6 +11,8 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DocumentsService } from './documents.service.js';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -19,6 +21,8 @@ import {
   DeleteFilesPayloadDto,
   UploadFilesResponseDto,
 } from './types/document.dto.js';
+import { type AuthenticatedRequest } from '../types/request.js';
+import { NotFoundProblem } from '../exceptions/problem-errors.js';
 
 @Controller('files')
 export class DocumentsController {
@@ -51,8 +55,19 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.documentsService.findOne(+id);
+  async findOne(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    const user = request.user;
+    const document = await this.documentsService.findOne(id);
+
+    if (!document) {
+      throw new NotFoundProblem({ detail: 'Document doesnt exist' });
+    }
+
+    if (document.user.id !== user.id) {
+      throw new ForbiddenException();
+    }
+
+    return document;
   }
 
   @HttpCode(HttpStatus.ACCEPTED)

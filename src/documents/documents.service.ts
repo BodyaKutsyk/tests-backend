@@ -107,8 +107,11 @@ export class DocumentsService {
     return `This action returns all files`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} file`;
+  findOne(id: string) {
+    return this.documentRepo.findOne({
+      where: { id },
+      relations: { user: true },
+    });
   }
 
   async remove(documentIds: string[]) {

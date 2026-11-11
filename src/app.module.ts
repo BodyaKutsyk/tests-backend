@@ -8,7 +8,7 @@ import { readFile } from 'node:fs/promises';
 import { UsersModule } from './users/users.module.js';
 import { entitiesPath } from './data-source.js';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ProblemExceptionFilter } from './exceptions/problem-exception-filter.js';
 import { AppValidationPipe } from './pipes/app-validation.pipe.js';
 import { TestsModule } from './tests/tests.module.js';
@@ -16,7 +16,6 @@ import { DocumentsModule } from './documents/documents.module.js';
 import { QuotasModule } from './quotas/quotas.module.js';
 import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
-import { OutboxModule } from './outbox/outbox.module.js';
 import { InboxModule } from './inbox/inbox.module.js';
 import { RequireHeaderGuard } from './guards/required-headers/required-headers.guard.js';
 import { RedisQueueModule } from './redis/queue/queue.module.js';
@@ -30,7 +29,11 @@ import { DocumentsGarbageCollectorModule } from './documents-garbage-collector/d
 import { AuthModule } from './auth/auth.module.js';
 import { QueryLogger } from './utils/query-logger.js';
 import { DbCounterModule } from './db/db-counter.module.js';
-import { AuthenticationModule } from '@nestjs/authentication';
+import {
+  AuthenticationGuard,
+  AuthenticationModule,
+} from '@nestjs/authentication';
+import { RolesGuard } from './guards/roles.guard.js';
 
 @Module({
   imports: [
@@ -131,13 +134,18 @@ import { AuthenticationModule } from '@nestjs/authentication';
       provide: APP_FILTER,
       useClass: ProblemExceptionFilter,
     },
-    // {
-    //   provide: APP_INTERCEPTOR,
-    //   useClass: AuthInterceptor,
-    // },
     {
       provide: APP_GUARD,
       useClass: RequireHeaderGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthenticationGuard,
+    },
+
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
     ...(process.env.INFISICAL_ENV === 'prod'
       ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
