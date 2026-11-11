@@ -1,4 +1,4 @@
-import { Helper } from '../../utils/helper.js';
+import { Helper, type HttpResult } from '../../utils/helper.js';
 import { randomUUID } from 'crypto';
 
 interface AuthResponse {
@@ -7,8 +7,12 @@ interface AuthResponse {
   expiresIn: number;
 }
 
+interface GetUsersProps {
+  accessToken: string;
+}
+
 export class Helper24 extends Helper {
-  async signUp() {
+  async signUp(): Promise<HttpResult<AuthResponse>> {
     const email = `user-${randomUUID().slice(0, 6)}@gmail.com`;
     const password = 'Test1234!';
     const data = { email, password };
@@ -16,7 +20,15 @@ export class Helper24 extends Helper {
     return this.post<AuthResponse>('/auth/sign-up', data);
   }
 
-  async refresh(refreshToken: string) {
+  async refresh(refreshToken: string): Promise<HttpResult<AuthResponse>> {
     return this.post<AuthResponse>('/auth/refresh', { refreshToken });
+  }
+
+  async logout(refreshToken: string): Promise<HttpResult<never>> {
+    return this.post<never>('/auth/sign-out', { refreshToken });
+  }
+
+  async getUsers({ accessToken }: GetUsersProps) {
+    return this.get('/users', { Authorization: `Bearer ${accessToken}` });
   }
 }

@@ -30,6 +30,23 @@ interface CreateTestResponse {
   createdAt: Date;
 }
 
+export type HttpResult<T> =
+  | { ok: true; status: number; data: T }
+  | { ok: true; status: 204 }
+  | { ok: false; status: number; data: unknown };
+
+async function readResponseBody(response: Response): Promise<unknown> {
+  const body = await response.text();
+
+  if (!body) return undefined;
+
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return body;
+  }
+}
+
 export class Helper {
   dataSource = new DataSource({
     ...dataSourceOptions,
@@ -74,18 +91,31 @@ export class Helper {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(JSON.stringify(error));
+      let error = '';
+      try {
+        // @ts-ignore
+        error = await response.json();
+      } catch {}
+
+      return {
+        status: response.status,
+        data: error,
+      };
     }
 
-    return (await response.json()) as T;
+    const data = (await response.json()) as T;
+
+    return {
+      data,
+      status: response.status,
+    };
   }
 
   async post<T>(
     path: string,
     data: unknown,
     headers: Record<string, string> = {},
-  ): Promise<T> {
+  ): Promise<HttpResult<T>> {
     const response = await fetch(
       `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
       {
@@ -99,11 +129,24 @@ export class Helper {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(JSON.stringify(error));
+      return {
+        ok: false,
+        status: response.status,
+        data: await readResponseBody(response),
+      };
     }
 
-    return (await response.json()) as T;
+    if (response.status === 204) {
+      return { ok: true, status: 204 };
+    }
+
+    const dataParsed = (await readResponseBody(response)) as T;
+
+    return {
+      ok: true,
+      data: dataParsed,
+      status: response.status,
+    };
   }
 
   async publishRabbitMQ<T>({ exchange, routingKey, payload }: PublishProps<T>) {
@@ -197,6 +240,10 @@ export class Helper {
     }
 
     return body as CreateTestResponse;
+  }
+
+  async getTests({ accessToken }: { accessToken: string }) {
+    return this.get('/tests', { Authorization: `Bearer ${accessToken}` });
   }
 }
 
