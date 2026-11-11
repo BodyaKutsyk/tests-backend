@@ -1,11 +1,21 @@
-import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Channel } from 'amqplib';
+import { Subject } from 'rxjs';
+import { Repository } from 'typeorm';
 import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
 import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.js';
+import { GenerationJob } from '../entities/generation-job.js';
+import { InboxService } from '../inbox/inbox.service.js';
+import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
+import { GENERATION_JOB_DELIVERIES_CHANNEL } from '../utils/demos.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { GenerationJobsWorkflowService } from './generation-jobs-workflow.service.js';
-import { Subject } from 'rxjs';
 
 @Injectable()
 export class GenerationJobsConsumer implements OnApplicationBootstrap {
@@ -14,6 +24,7 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
   private readonly acknowledgementsSubject =
     new Subject<GenerationJobCreatedEvent>();
   private readonly rejectionsSubject = new Subject<GenerationJobCreatedEvent>();
+  private readonly logger = new Logger(this.constructor.name);
   readonly deliveries$ = this.deliveriesSubject.asObservable();
   readonly acknowledgements$ = this.acknowledgementsSubject.asObservable();
   readonly rejections$ = this.rejectionsSubject.asObservable();
@@ -25,6 +36,9 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
     private readonly topology: GenerationJobsTopologyService,
     @Inject(GenerationJobsWorkflowService)
     private readonly workflow: GenerationJobsWorkflowService,
+    private readonly inboxService: InboxService,
+    @InjectRepository(GenerationJob)
+    private readonly generationJobRepository: Repository<GenerationJob>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -39,23 +53,38 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
     await this.channel.consume(
       GENERATION_JOBS_ROUTING_KEYS.CREATED,
       async (data) => {
-        if (!data) {
-          return;
-        }
+        if (!data) return;
 
-        const response: GenerationJobCreatedEvent = JSON.parse(
+        const event: GenerationJobCreatedEvent = JSON.parse(
           data.content.toString(),
         );
-        this.deliveriesSubject.next(response);
+        this.deliveriesSubject.next(event);
 
         try {
-          await this.workflow.process(response.id);
+          const manager = this.generationJobRepository.manager;
+          try {
+            await manager.query('SELECT pg_notify($1, $2)', [
+              GENERATION_JOB_DELIVERIES_CHANNEL,
+              data.content.toString(),
+            ]);
+          } catch (error) {
+            this.logger.warn('Could not report generation job delivery', error);
+          }
 
+          const isNew = await manager.transaction(async (entityManager) => {
+            const inbox = await this.inboxService.save(
+              { messageId: event.id, consumer: this.constructor.name },
+              entityManager,
+            );
+            return inbox.raw.length > 0;
+          });
+
+          if (isNew) await this.workflow.process(event.id);
           this.channel.ack(data);
-          this.acknowledgementsSubject.next(response);
+          this.acknowledgementsSubject.next(event);
         } catch {
           this.channel.nack(data, false, false);
-          this.rejectionsSubject.next(response);
+          this.rejectionsSubject.next(event);
         }
       },
       { noAck: false },

@@ -59,10 +59,11 @@ export class NotFoundProblem extends Problem {
 export class UnauthorizedProblem extends Problem {
   constructor({
     title = 'Unauthorized',
+    detail = title,
     status = 401,
     ...problem
   }: ProblemArgs = {}) {
-    super({ title, status, ...problem });
+    super({ title, status, detail, ...problem });
   }
 }
 

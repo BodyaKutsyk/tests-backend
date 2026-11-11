@@ -168,7 +168,7 @@ The project uses Jest. Run `pnpm test` for unit tests, `pnpm test:integration` f
 
 Pact uses consumer-driven contracts: the consumer test records the frontend's expected API behavior, then the provider verifier checks the API against that contract. Provider verification seeds its disposable database for the declared provider state and publishes the verification result to the broker on every run. The broker stores contract versions separately from the disposable test database, so test data can be safely reset without losing contract history or verification results.
 
-Start the broker and its PostgreSQL database:
+Start the broker, PostgreSQL, RabbitMQ, and Redis dependencies:
 
 ```bash
 pnpm infisical docker compose -f docker-compose.pact.yml up -d --wait
@@ -227,6 +227,13 @@ The broker reported that all required verification results were published and su
 | `RABBITMQ_PASSWORD`       | Password used to authenticate with RabbitMQ                                      |
 | `RABBITMQ_PORT`           | Port used to connect to the RabbitMQ                                             |
 | `RABBITMQ_HOST`           | Host used to connect to the RabbitMQ                                             |
+| `REDIS_QUEUE_HOST`        | Host used to connect to the Redis Queue                                          |
+| `REDIS_QUEUE_PORT`        | Port used to connect to the Redis Queue                                          |
+| `REDIS_CACHE_HOST`        | Host used to connect to the Redis Cache                                          |
+| `REDIS_CACHE_PORT`        | Port used to connect to the Redis Cache                                          |
+| `REDIS_PASSWORD`          | Password for the Redis                                                           | 
+| `JWT_PUBLIC_KEY`          | Secret used to verify and validate JWT                                           |
+| `JWT_PRIVATE_KEY`         | Secret used to create and sign JWT                                               |
 
 ### How to start
 
@@ -267,26 +274,32 @@ docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sq
 
 ## Grading
 
-### 0. Prepare Environment Variables                                                                                                                                                                                         
-                                                                                                                                                                                                                           
-Before running grading commands directly on the host, export the database variables:                                                                                                                                         
-                                                                                                                                                                                                                           
-```bash                                                                                                                                                                                                                      
-export POSTGRES_DB=my_db                                                                                                                                                                                                     
-export POSTGRES_ADMIN=admin                                                                                                                                                                                                  
-export POSTGRES_ADMIN_PASSWORD=admin_password                                                                                                                                                                                
-export POSTGRES_HOST=127.0.0.1                                                                                                                                                                                               
-export POSTGRES_PORT=5432   
+Run these commands from the repository root. Set `SKIP_VAULT=1` so `pnpm infisical` loads the development values from `.env.example` without contacting Infisical. The grading Compose override passes those values to the API containers and starts them directly.
+
+```bash
+export SKIP_VAULT=1
+export POSTGRES_HOST=127.0.0.1
+export RABBITMQ_HOST=127.0.0.1
+export REDIS_CACHE_HOST=127.0.0.1
+export REDIS_QUEUE_HOST=127.0.0.1
+pnpm install --frozen-lockfile
+pnpm infisical bash -c 'mkdir -p secrets; printf "%s" "$POSTGRES_USER_PASSWORD" > secrets/db_password'
+pnpm infisical docker compose -f docker-compose.yaml -f docker-compose.grading.yml up -d --wait db pg_bouncer rabbitmq redis-cache redis-queue
+pnpm build
+pnpm migrate
+pnpm seed
+pnpm infisical docker compose -f docker-compose.yaml -f docker-compose.grading.yml up -d --build --wait api
+pnpm demo:cache
+pnpm demo:session
+pnpm demo:ratelimit
+pnpm demo:queue
+```
+
+The cache Redis is published on port 6380 and the queue Redis on port 6379. The API is published on port 5137 by the development example. `--wait` lets Redis and PostgreSQL become healthy before migrations and demos start. The rate limit demo starts two additional API containers on ports 3001 and 3002.
 
 ### Running without Infisical
 
-To execute commands without Infisical, use:
-
-```bash
-SKIP_VAULT=1 pnpm infisical <command>
-```
-
-Replace `<command>` with the command you want to execute. In this mode, environment variables are loaded from the local `.env` file.
+Each homework demo runs through `pnpm infisical`. With `SKIP_VAULT=1`, `infisical.sh` loads missing development variables from `.env.example` and runs the demo without contacting Infisical.
 
 ### Backup and Restore Drill
 
@@ -439,6 +452,56 @@ For this API, SSE is the simpler choice for one-way generation status updates. U
 
 With two or more API instances, events kept in memory are not shared. A client connected to another instance may miss an update. Shared event delivery is needed for both SSE and WebSocket.
 
+### Redis: Cache, Sessions, Rate Limiting, and Queue Demo
+
+The project uses two Redis services because eviction policy is configured per server. Cache Redis uses `allkeys-lru`, so it can evict cached data under memory pressure. BullMQ and sessions use a separate Redis service with `noeviction`, AOF, and a persistent Docker volume because this state must survive process restarts and must not be evicted.
+
+Cache entries have a TTL to bound staleness. TTL jitter spreads expirations and reduces simultaneous cache misses.
+
+If a stampede lock expires or its owner crashes, requests may repeat the database read. This is acceptable here because the lock only avoids duplicate reads: the failure can increase database load but does not corrupt business data. A business invariant would need a stronger mechanism.
+
+Sessions are stored in queue Redis. Authenticated requests validate the session and refresh its TTL, keeping active sessions alive. Rate limiting uses shared Redis counters across API instances. NestJS Throttler applies a fixed window of 4 requests per 5 seconds and uses client IP by default; excess requests return 429 with `Retry-After`. We chose the fixed window for its simple, inexpensive counter; a brief burst across a window boundary is acceptable for this endpoint.
+
+#### Queue retry and scheduler demo
+
+With Infisical, start Docker services so the API worker and its existing garbage-collection scheduler are running. For a run without Infisical, use the commands in `Grading` above.
+
+```bash
+pnpm infisical docker compose up -d --wait
+```
+
+Run the demo from the host:
+
+```bash
+pnpm demo:queue
+```
+
+The demo reads `maxmemory-policy` from queue Redis, adds the same job twice with one stable `jobId`, and confirms there is one queued job. The consumer intentionally fails this marked demo job twice; BullMQ retries it and the third attempt succeeds. The marked job exits before the garbage-collection code, so it does not delete document files or rows. The demo also counts configured schedulers and observes two completed scheduler runs, which takes a little over two minutes with the current 60-second interval.
+
+#### Measured demo results
+
+These are results from the local Docker stack on 2026-11-05. The API was published on port 3000, cache Redis on 6380, and queue Redis on 6381. The demo commands finished with exit code 0.
+
+`pnpm demo:cache`:
+
+```text
+cache-lru=1
+cache-maxmemory=1
+warmed=50
+ttl-distinct=47
+concurrent=20
+db-calls=1
+db-calls-warm=0
+```
+
+`pnpm demo:session`:
+
+```text
+requests=3
+sessions=1
+in-redis=1
+ttl-renewed=1
+```
 Run the demo:
 
 ```bash
@@ -446,6 +509,31 @@ pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs
 pnpm infisical pnpm exec tsx scripts/realtime-demo.mjs --same-room
 ```
 
+`pnpm demo:ratelimit`:
+
+```text
+instances=2
+limit=4
+requests=20
+allowed=4
+blocked=16
+status=429
+retry-after=1
+```
+
+`pnpm demo:queue`:
+
+```text
+queue-noeviction=1
+attempts=3
+completed=1
+added=2
+queued=1
+schedulers=1
+scheduled-runs=2
+```
+
+Scheduler count can be greater than one if more schedulers are registered on the queue. The demo exits with an error status if a required retry, de-duplication, Redis policy, or scheduler check fails.
 ## Async Events with RabbitMQ
 
 The demos publish to the existing work queue and observe the API consumer through RabbitMQ queue statistics and job records. The API consumer stays enabled; the demos do not start a second consumer or purge the queues.
@@ -489,4 +577,36 @@ skipped=1
 `prefetch=4` limits the number of unacknowledged messages. Each job has two 5-second stages, and the workflow checks its state every 6 seconds: up to 22 seconds per job, or about 88 seconds for four concurrent messages.
 
 RabbitMQ provides at-least-once delivery: if an ack is lost, a message may be delivered again. Processing must therefore be idempotent. The duplicate demo publishes the same event twice and checks that the job completes once and redelivery does not create a second effect.
+
+## Authentication and Authorization
+
+The API uses `@nestjs/authentication` for bearer-token authentication. `AuthenticationGuard` is registered globally in `AppModule`. `JwtAuth`, registered in `AuthenticationRegistry`, verifies the access JWT, checks its `sid` against the Redis session-family record, and loads the current user. Authenticated requests expose that user through `request.user` and `@CurrentUser()`.
+
+### Sign-up, sign-in, refresh, and sign-out
+
+`POST /auth/sign-up` and `POST /auth/sign-in` return a short-lived access JWT and an opaque refresh token. Refresh tokens are stored in Redis by their SHA-256 ID. Each sign-in starts a token family; refresh rotates the single-use refresh token while keeping the new token in the same family. The family record tracks the user, `sid`, role snapshot, revocation state, idle activity, and absolute expiration.
+
+Redis Lua scripts perform the state changes atomically. `markRefreshTokenUsed` is a compare-and-set operation. Reusing a spent refresh token revokes its whole family. Access-token validation checks the family through the `sid` index, so revocation also prevents later requests made with access tokens from that family. `POST /auth/sign-out` revokes the family associated with the supplied refresh token and returns `204 No Content`.
+
+### Role and document access
+
+Users have one `Role` value (`customer` or `admin`). `@Roles(Role.Admin)` marks routes that require the admin role, and the global `RolesGuard` checks the authenticated user's current role. For example, `GET /users` is admin-only. Document upload accepts `.pdf`, `.txt`, and `.md` files as multipart data under the `files` field. `GET /files/:id` compares the document owner with the authenticated user and is intended to return `403` for another user's document. The current service lookup does not explicitly load the `user` relation, so this check should load that relation or compare the foreign key directly before relying on that behavior.
+
+### Running the demos
+
+Start the development stack first so the API, PostgreSQL, and Redis are available:
+
+```bash
+pnpm docker:start:dev
+```
+
+Run the homework scripts from the repository root:
+
+```bash
+pnpm demo:auth
+pnpm demo:reuse
+pnpm demo:rbac
+```
+
+The auth demo checks sign-up, access-token requirements, refresh, and sign-out. The RBAC demo checks anonymous access, document ownership, the admin-only users route, and rejection of a malformed token. The reuse demo is intended to check refresh-token replay and family revocation; its current implementation passes access tokens to `/auth/refresh` for the `r1-reuse` and `r2-after-reuse` requests, so those checks do not yet demonstrate refresh-token replay or family revocation. To verify replay behavior, the repeated request must submit the already-used `r1RefreshToken` to `/auth/refresh`, then check that both access tokens are rejected.
 

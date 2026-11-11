@@ -13,6 +13,13 @@ export const envSchema = z.object({
   RABBITMQ_PORT: portType,
   RABBITMQ_USER: z.string(),
   RABBITMQ_PASSWORD: z.string(),
+  REDIS_QUEUE_HOST: z.string(),
+  REDIS_QUEUE_PORT: portType,
+  REDIS_CACHE_HOST: z.string(),
+  REDIS_CACHE_PORT: portType,
+  REDIS_PASSWORD: z.string(),
+  JWT_PUBLIC_KEY: z.string(),
+  JWT_PRIVATE_KEY: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

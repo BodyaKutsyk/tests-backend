@@ -11,6 +11,7 @@ import {
   GENERATION_JOBS_DLQ_QUEUE,
   GENERATION_JOBS_ROUTING_KEYS,
 } from '../../src/contracts/generation/constants.js';
+import { Document } from '../../src/entities/document.js';
 
 export interface CreateTest {
   questionCount: number;
@@ -28,6 +29,23 @@ interface CreateTestResponse {
   id: string;
   status: string;
   createdAt: Date;
+}
+
+export type HttpResult<T> =
+  | { ok: true; status: number; data: T }
+  | { ok: true; status: 204 }
+  | { ok: false; status: number; data: unknown };
+
+async function readResponseBody(response: Response): Promise<unknown> {
+  const body = await response.text();
+
+  if (!body) return undefined;
+
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return body;
+  }
 }
 
 export class Helper {
@@ -59,6 +77,89 @@ export class Helper {
     this.channel.on('error', (error) => {
       console.log(error);
       this.logger.log(error);
+    });
+  }
+
+  async get<T>(path: string, headers: Record<string, string> = {}) {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      let error = '';
+      try {
+        // @ts-ignore
+        error = await response.json();
+      } catch {}
+
+      return {
+        status: response.status,
+        data: error,
+      };
+    }
+
+    const data = (await response.json()) as T;
+
+    return {
+      data,
+      status: response.status,
+    };
+  }
+
+  async post<T>(
+    path: string,
+    data: unknown,
+    headers: Record<string, string> = {},
+  ): Promise<HttpResult<T>> {
+    const response = await fetch(
+      `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        data: await readResponseBody(response),
+      };
+    }
+
+    if (response.status === 204) {
+      return { ok: true, status: 204 };
+    }
+
+    const dataParsed = (await readResponseBody(response)) as T;
+
+    return {
+      ok: true,
+      data: dataParsed,
+      status: response.status,
+    };
+  }
+
+  async getRandomDocument() {
+    return this.dataSource
+      .createQueryBuilder(Document, 'document')
+      .orderBy('RANDOM()')
+      .getOne();
+  }
+
+  async getDocument(docId: string, accessToken: string) {
+    return this.get(`/files/${docId}`, {
+      Authorization: `Bearer ${accessToken}`,
     });
   }
 
@@ -153,6 +254,10 @@ export class Helper {
     }
 
     return body as CreateTestResponse;
+  }
+
+  async getTests({ accessToken }: { accessToken: string }) {
+    return this.get('/tests', { Authorization: `Bearer ${accessToken}` });
   }
 }
 

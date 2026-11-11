@@ -9,6 +9,9 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 
 import { seedUsers } from '../db/seeds/seed-users.js';
 import { Client } from 'pg';
+import { REDIS_QUEUE_CLIENT } from '../src/redis/constants.js';
+import { getRedisSessionKey } from '../src/contracts/session/constants.js';
+import { Redis } from 'ioredis';
 
 describe('Provider Verification', () => {
   let app: INestApplication;
@@ -53,6 +56,14 @@ describe('Provider Verification', () => {
         'at least one user exists': async () => {
           await client.query('TRUNCATE TABLE users CASCADE');
           await seedUsers(client, 10);
+          const [{ id: userId }] = (
+            await client.query(
+              'SELECT id FROM users ORDER BY created_at LIMIT 1',
+            )
+          ).rows;
+          const redis = app.get<Redis>(REDIS_QUEUE_CLIENT);
+          const sessionId = '123';
+          await redis.del(getRedisSessionKey(sessionId));
         },
       },
     });

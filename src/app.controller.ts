@@ -1,5 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { AppService } from './app.service.js';
+import { SkipThrottle } from '@nestjs/throttler';
+import { Public } from '@nestjs/authentication';
 
 @Controller()
 export class AppController {
@@ -10,6 +12,8 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @SkipThrottle()
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Get('health')
   healthCheck() {

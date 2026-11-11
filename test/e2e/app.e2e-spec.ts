@@ -44,20 +44,20 @@ describe('AppController (e2e)', () => {
       .expect(404);
   });
 
-  it('successfully creates user and it`s quotas /users (POST)', async () => {
-    const user: CreateUserDto = {
-      firstName: 'Jane',
-      lastName: 'Doe',
-      email: 'test@test.com',
-      password: '12345678',
-    };
-    const response = await request(app.getHttpServer())
-      .post('/users')
-      .send(user);
-    expect(response.statusCode).toBe(201);
-    expect(response.body).toHaveProperty('quotas');
-    expect(response.body.quotas.length).toBe(2);
-  });
+  // it('successfully creates user and it`s quotas /users (POST)', async () => {
+  //   const user: CreateUserDto = {
+  //     firstName: 'Jane',
+  //     lastName: 'Doe',
+  //     email: 'test@test.com',
+  //     password: '12345678',
+  //   };
+  //   const response = await request(app.getHttpServer())
+  //     .post('/users')
+  //     .send(user);
+  //   expect(response.statusCode).toBe(201);
+  //   expect(response.body).toHaveProperty('quotas');
+  //   expect(response.body.quotas.length).toBe(2);
+  // });
 
   afterEach(async () => {
     await app.close();

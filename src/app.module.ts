@@ -8,7 +8,7 @@ import { readFile } from 'node:fs/promises';
 import { UsersModule } from './users/users.module.js';
 import { entitiesPath } from './data-source.js';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ProblemExceptionFilter } from './exceptions/problem-exception-filter.js';
 import { AppValidationPipe } from './pipes/app-validation.pipe.js';
 import { TestsModule } from './tests/tests.module.js';
@@ -16,6 +16,24 @@ import { DocumentsModule } from './documents/documents.module.js';
 import { QuotasModule } from './quotas/quotas.module.js';
 import { GenerationJobModule } from './generation-jobs/generation-jobs.module.js';
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
+import { InboxModule } from './inbox/inbox.module.js';
+import { RequireHeaderGuard } from './guards/required-headers/required-headers.guard.js';
+import { RedisQueueModule } from './redis/queue/queue.module.js';
+import { RedisCacheModule } from './redis/cache/cache.module.js';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { Redis } from 'ioredis';
+import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
+import { DocumentsGarbageCollectorModule } from './documents-garbage-collector/documents-garbage-collector.module.js';
+import { AuthModule } from './auth/auth.module.js';
+import { QueryLogger } from './utils/query-logger.js';
+import { DbCounterModule } from './db/db-counter.module.js';
+import {
+  AuthenticationGuard,
+  AuthenticationModule,
+} from '@nestjs/authentication';
+import { RolesGuard } from './guards/roles.guard.js';
 
 @Module({
   imports: [
@@ -27,6 +45,8 @@ import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<Env, true>) => {
         const DB_PASSWORD_FILE = configService.get('POSTGRES_PASSWORD_FILE');
+        const logger = new QueryLogger();
+        const enableLogger = Boolean(process.env.INFISICAL_ENV === 'dev');
 
         return {
           type: 'postgres',
@@ -38,15 +58,70 @@ import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
           database: configService.get('POSTGRES_DB'),
           namingStrategy: new SnakeNamingStrategy(),
           entities: [entitiesPath],
+          logger,
+          logging: enableLogger ? ['query'] : false,
         };
       },
     }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        throttlers: [
+          {
+            ttl: 5_000,
+            limit: 4,
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis({
+            host: configService.get('REDIS_QUEUE_HOST'),
+            port: configService.get('REDIS_QUEUE_PORT'),
+            password: configService.get('REDIS_PASSWORD'),
+          }),
+        ),
+      }),
+    }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        connection: {
+          host: configService.get('REDIS_QUEUE_HOST'),
+          port: configService.get('REDIS_QUEUE_PORT'),
+          password: configService.get('REDIS_PASSWORD'),
+        },
+      }),
+    }),
+    ScheduleModule.forRoot(),
+    AuthenticationModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<Env, true>) => ({
+        accessToken: {
+          key: configService.get('JWT_PRIVATE_KEY'),
+          issuer: 'test-generator',
+          audience: 'test-generator-api',
+          signOptions: {
+            algorithm: 'RS256',
+            expiresIn: '5m',
+          },
+          verifyOptions: {
+            secretOrPublicKey: configService.get('JWT_PUBLIC_KEY'),
+            algorithms: ['RS256'],
+          },
+        },
+      }),
+    }),
+    InboxModule,
     RabbitMqModule,
     UsersModule,
     GenerationJobModule,
     TestsModule,
     DocumentsModule,
     QuotasModule,
+    RedisQueueModule,
+    RedisCacheModule,
+    DocumentsGarbageCollectorModule,
+    AuthModule,
+    DbCounterModule,
   ],
   controllers: [AppController],
   providers: [
@@ -59,6 +134,22 @@ import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module.js';
       provide: APP_FILTER,
       useClass: ProblemExceptionFilter,
     },
+    {
+      provide: APP_GUARD,
+      useClass: RequireHeaderGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthenticationGuard,
+    },
+
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    ...(process.env.INFISICAL_ENV === 'prod'
+      ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
+      : []),
   ],
 })
 export class AppModule {}

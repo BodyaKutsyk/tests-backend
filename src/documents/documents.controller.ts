@@ -7,15 +7,26 @@ import {
   UseInterceptors,
   UploadedFiles,
   ParseFilePipeBuilder,
+  Headers,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DocumentsService } from './documents.service.js';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../pipes/file-validation.pipe.js';
-import { UploadFilesResponseDto } from './types/document.dto.js';
+import {
+  DeleteFilesPayloadDto,
+  UploadFilesResponseDto,
+} from './types/document.dto.js';
+import { type AuthenticatedRequest } from '../types/request.js';
+import { NotFoundProblem } from '../exceptions/problem-errors.js';
 
 @Controller('files')
 export class DocumentsController {
-  constructor(private readonly filesService: DocumentsService) {}
+  constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
   @UseInterceptors(
@@ -33,27 +44,36 @@ export class DocumentsController {
         .build(),
     )
     files: Express.Multer.File[],
+    @Req() request: AuthenticatedRequest,
   ): Promise<UploadFilesResponseDto> {
-    return this.filesService.upload(files);
+    const { id } = request.user;
+    return this.documentsService.upload(files, id);
   }
 
   @Get()
   findAll() {
-    return this.filesService.findAll();
+    return this.documentsService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.filesService.findOne(+id);
-  }
-  //
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
-  //   return this.filesService.update(+id, updateFileDto);
-  // }
+  async findOne(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    const user = request.user;
+    const document = await this.documentsService.findOne(id);
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.filesService.remove(+id);
+    if (!document) {
+      throw new NotFoundProblem({ detail: 'Document doesnt exist' });
+    }
+
+    if (document.user.id !== user.id) {
+      throw new ForbiddenException();
+    }
+
+    return document;
+  }
+
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Delete()
+  remove(@Body() { documentIds }: DeleteFilesPayloadDto) {
+    return this.documentsService.remove(documentIds);
   }
 }

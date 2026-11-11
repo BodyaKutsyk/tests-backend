@@ -12,10 +12,9 @@ import {
   FileUploadResponse,
   UploadFilesResponseDto,
 } from './types/document.dto.js';
+import { NotFoundProblem } from '../exceptions/problem-errors.js';
 
 // will be replaced with JWT
-let userId = '7f18810b-10b6-4f67-83d5-5fb6c1aab845';
-
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -25,7 +24,10 @@ export class DocumentsService {
     private readonly quotaService: QuotasService,
   ) {}
 
-  async upload(files: Express.Multer.File[]): Promise<UploadFilesResponseDto> {
+  async upload(
+    files: Express.Multer.File[],
+    userId: string,
+  ): Promise<UploadFilesResponseDto> {
     const directory = join('uploads', userId);
     const totalFilesSize = files.reduce((prev, curr) => prev + curr.size, 0);
     await this.quotaService.reserveStorage(
@@ -45,18 +47,19 @@ export class DocumentsService {
           file.buffer,
           file.originalname,
         );
-        const document = this.documentRepo.create({
-          storageKey: fileName,
-          name: file.originalname,
-          mimeType,
-          size: file.size,
-          user: { id: userId },
-        });
 
         await writeFile(path, file.buffer);
-        await this.documentRepo.save(document);
+        const document = await this.documentRepo.save(
+          this.documentRepo.create({
+            storageKey: fileName,
+            name: file.originalname,
+            mimeType,
+            size: file.size,
+            user: { id: userId },
+          }),
+        );
 
-        return { fileName, path };
+        return { id: document.id, fileName, path };
       } catch (e) {
         await rm(path, { force: true });
         throw e;
@@ -91,6 +94,7 @@ export class DocumentsService {
       }
 
       return {
+        id: result.value.id,
         filename: result.value.fileName,
         status: 'success',
       };
@@ -105,11 +109,26 @@ export class DocumentsService {
     return `This action returns all files`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} file`;
+  findOne(id: string) {
+    return this.documentRepo.findOne({
+      where: { id },
+      relations: { user: true },
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} file`;
+  async remove(documentIds: string[]) {
+    const uniqIds = [...new Set(documentIds)];
+    const exists = await this.documentRepo
+      .createQueryBuilder('document')
+      .where('document.id IN (:...uniqIds)', { uniqIds })
+      .getCount();
+
+    if (exists === 0) {
+      throw new NotFoundProblem({
+        detail: 'No documents found with these ids',
+      });
+    }
+
+    await this.documentRepo.softDelete(documentIds);
   }
 }
