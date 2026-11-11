@@ -7,9 +7,11 @@ async function main() {
     await helper.dataSource.initialize();
     const signUpResult = await helper.signUp();
     const signUpStatus = signUpResult.status;
+
     if (!signUpResult.ok || !('data' in signUpResult)) {
       throw new Error(`Sign-up failed (${signUpStatus})`);
     }
+
     const { accessToken, refreshToken } = signUpResult.data;
     const { status: withoutTokenStatus } = await helper.getTests({
       accessToken: '',
@@ -19,9 +21,11 @@ async function main() {
     });
     const refreshResult = await helper.refresh(refreshToken);
     const refreshStatus = refreshResult.status;
+
     if (!refreshResult.ok || !('data' in refreshResult)) {
       throw new Error(`Refresh failed (${refreshStatus})`);
     }
+
     const rotatedRefreshToken = refreshResult.data.refreshToken;
     const { status: logoutStatus } = await helper.logout(rotatedRefreshToken);
     const { status: afterLogOutStatus } = await helper.getTests({
@@ -56,6 +60,7 @@ async function main() {
       refreshAfterLogout: refreshAfterLogoutStatus === 401,
       accessAfterRefreshAttempt: afterRefreshLogOutStatus === 401,
     } satisfies Record<string, boolean>;
+
     const failedChecks = Object.entries(checks)
       .filter(([, passed]) => !passed)
       .map(([name]) => name);
@@ -66,7 +71,6 @@ async function main() {
 
     process.exitCode = failedChecks.length === 0 ? 0 : 1;
   } catch {
-    console.log('fail');
     process.exitCode = 1;
   } finally {
     await helper.dataSource.destroy();

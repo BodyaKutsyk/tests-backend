@@ -1,6 +1,7 @@
-import { ArrayNotEmpty, IsArray, IsUUID } from 'class-validator';
+import { ArrayNotEmpty, IsUUID } from 'class-validator';
 
 export interface FileUploadResponse {
+  id?: string;
   filename: string;
   status: 'success' | 'failed';
   reason?: string;

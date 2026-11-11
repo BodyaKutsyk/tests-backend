@@ -44,9 +44,10 @@ export class DocumentsController {
         .build(),
     )
     files: Express.Multer.File[],
-    @Headers('user-id') userId: string,
+    @Req() request: AuthenticatedRequest,
   ): Promise<UploadFilesResponseDto> {
-    return this.documentsService.upload(files, userId);
+    const { id } = request.user;
+    return this.documentsService.upload(files, id);
   }
 
   @Get()

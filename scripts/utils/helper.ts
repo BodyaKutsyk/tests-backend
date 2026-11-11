@@ -11,6 +11,7 @@ import {
   GENERATION_JOBS_DLQ_QUEUE,
   GENERATION_JOBS_ROUTING_KEYS,
 } from '../../src/contracts/generation/constants.js';
+import { Document } from '../../src/entities/document.js';
 
 export interface CreateTest {
   questionCount: number;
@@ -147,6 +148,19 @@ export class Helper {
       data: dataParsed,
       status: response.status,
     };
+  }
+
+  async getRandomDocument() {
+    return this.dataSource
+      .createQueryBuilder(Document, 'document')
+      .orderBy('RANDOM()')
+      .getOne();
+  }
+
+  async getDocument(docId: string, accessToken: string) {
+    return this.get(`/files/${docId}`, {
+      Authorization: `Bearer ${accessToken}`,
+    });
   }
 
   async publishRabbitMQ<T>({ exchange, routingKey, payload }: PublishProps<T>) {

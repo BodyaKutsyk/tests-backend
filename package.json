@@ -59,6 +59,8 @@
     "demo:dlq": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-dlq.ts",
     "demo:duplicate": "pnpm infisical docker compose exec -T api pnpm infisical pnpm exec tsx scripts/demo-duplicate.ts",
     "demo:auth": "pnpm infisical pnpm exec tsx scripts/demo/24/auth.ts",
+    "demo:reuse": "pnpm infisical pnpm exec tsx scripts/demo/24/reuse.ts",
+    "demo:rbac": "pnpm infisical pnpm exec tsx scripts/demo/24/rbac.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {
