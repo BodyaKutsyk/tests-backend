@@ -12,6 +12,8 @@ import { InboxModule } from '../inbox/inbox.module.js';
 import { RedisCacheModule } from '../redis/cache/cache.module.js';
 import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js';
 import { GenerationJobsService } from './generation-jobs.service.js';
+import { DoclingModule } from '../docling/docling.module.js';
+import { DocumentsModule } from '../documents/documents.module.js';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { GenerationJobsService } from './generation-jobs.service.js';
     InboxModule,
     RedisCacheModule,
     TypeOrmModule.forFeature([GenerationJob]),
+    DoclingModule,
   ],
   controllers: [],
   providers: [

@@ -64,6 +64,8 @@
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {
+    "@docling/docling-client": "^2.150.0",
+    "@docling/docling-core": "^2.106.0",
     "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs/authentication": "^0.1.5",
     "@nestjs/bullmq": "^12.0.0",

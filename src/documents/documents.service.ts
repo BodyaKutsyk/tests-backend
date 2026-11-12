@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -109,7 +109,7 @@ export class DocumentsService {
     return `This action returns all files`;
   }
 
-  findOne(id: string) {
+  getInfoById(id: string) {
     return this.documentRepo.findOne({
       where: { id },
       relations: { user: true },

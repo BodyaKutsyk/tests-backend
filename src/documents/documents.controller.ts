@@ -56,9 +56,12 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+  async getInfoById(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
     const user = request.user;
-    const document = await this.documentsService.findOne(id);
+    const document = await this.documentsService.getInfoById(id);
 
     if (!document) {
       throw new NotFoundProblem({ detail: 'Document doesnt exist' });

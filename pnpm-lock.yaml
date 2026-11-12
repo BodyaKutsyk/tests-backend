@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@docling/docling-client':
+        specifier: ^2.150.0
+        version: 2.150.0(ws@8.21.3)
+      '@docling/docling-core':
+        specifier: ^2.106.0
+        version: 2.106.0
       '@nest-lab/throttler-storage-redis':
         specifier: ^1.2.0
         version: 1.2.0(@nestjs/common@12.4.0(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@12.4.0)(@nestjs/throttler@6.7.1(@nestjs/common@12.4.0(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@12.4.0)(reflect-metadata@0.2.2))(ioredis@6.0.0(supports-color@8.1.1))(reflect-metadata@0.2.2)
@@ -390,6 +396,19 @@ packages:
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
+
+  '@docling/docling-client@2.150.0':
+    resolution: {integrity: sha512-Ik0+F4CSYmsEOUIAR8LHy9ltM8XlJg9OKg/AeqXxJEguBHPZgfe69oXfqTvrkCecJGCet4kVpNGNYBzh0HkISw==}
+    engines: {node: '>=18'}
+
+  '@docling/docling-core@2.106.0':
+    resolution: {integrity: sha512-qFhT/MPyYBW/1Xakgoa4fdMmYbMXG9iq5tCIoNT+KkcoBixBa7/q7idY12c8uKMyNIvSr/U5fTdQne8boxkjlA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@xmldom/xmldom': '>=0.8.0'
+    peerDependenciesMeta:
+      '@xmldom/xmldom':
+        optional: true
 
   '@esbuild/aix-ppc64@0.28.2':
     resolution: {integrity: sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==}
@@ -2647,6 +2666,10 @@ packages:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
 
+  ipaddr.js@2.5.0:
+    resolution: {integrity: sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==}
+    engines: {node: '>= 10'}
+
   is-arrayish@0.2.1:
     resolution: {integrity: sha512-zz06S8t0ozoDXMG+ube26zeCTNXcKIPJZJi8hBrF4idCLms4CG9QtK7qBl1boi5ODzFpjswb5JPmHCbMpjaYzg==}
 
@@ -2694,6 +2717,11 @@ packages:
 
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+
+  isomorphic-ws@5.0.0:
+    resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
+    peerDependencies:
+      ws: '*'
 
   istanbul-lib-coverage@3.2.2:
     resolution: {integrity: sha512-O8dpsF+r0WV/8MNRKfnmrtCWhuKjxrq2w+jpzBL5UZKTi2LeVWnWOmWRxFlesJONmc+wLAGvKQZEOanko0LFTg==}
@@ -4255,6 +4283,15 @@ snapshots:
 
   '@colors/colors@1.5.0':
     optional: true
+
+  '@docling/docling-client@2.150.0(ws@8.21.3)':
+    dependencies:
+      ipaddr.js: 2.5.0
+      isomorphic-ws: 5.0.0(ws@8.21.3)
+    transitivePeerDependencies:
+      - ws
+
+  '@docling/docling-core@2.106.0': {}
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true
@@ -6444,6 +6481,8 @@ snapshots:
 
   ipaddr.js@1.9.1: {}
 
+  ipaddr.js@2.5.0: {}
+
   is-arrayish@0.2.1: {}
 
   is-extglob@2.1.1: {}
@@ -6471,6 +6510,10 @@ snapshots:
   isarray@1.0.0: {}
 
   isexe@2.0.0: {}
+
+  isomorphic-ws@5.0.0(ws@8.21.3):
+    dependencies:
+      ws: 8.21.3
 
   istanbul-lib-coverage@3.2.2: {}
 

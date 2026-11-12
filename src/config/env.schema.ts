@@ -20,6 +20,9 @@ export const envSchema = z.object({
   REDIS_PASSWORD: z.string(),
   JWT_PUBLIC_KEY: z.string(),
   JWT_PRIVATE_KEY: z.string(),
+  DOCLING_API_KEY: z.string(),
+  DOCLING_PORT: portType,
+  DOCLING_HOST: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

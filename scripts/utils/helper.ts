@@ -219,19 +219,19 @@ export class Helper {
   async createTest(
     data: CreateTest,
     idempotencyKey: string,
-    userId?: string,
+    accessToken: string,
     skipPublish?: boolean,
   ): Promise<CreateTestResponse> {
     const response = await fetch(
       `http://localhost:${Number(process.env.API_PORT || 3000)}/tests`,
       {
         method: 'POST',
-        body: JSON.stringify({ ...data, userId }),
+        body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idempotencyKey,
           'Skip-Publish': String(skipPublish),
-          ...(userId ? { 'user-id': userId } : {}),
+          Authorization: `Bearer ${accessToken}`,
         },
       },
     );

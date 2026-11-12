@@ -11,11 +11,15 @@ import { TestsParserWorkerService } from './workers/tests-parser-worker.service.
 import { TestsGeneratorWorkerService } from './workers/tests-generator-worker.service.js';
 import { RedisCacheService } from '../redis/cache/cache.service.js';
 import { getRedisUserTestsCacheKey } from '../contracts/generation/constants.js';
+import { DoclingService } from '../docling/docling.service.js';
 
 @Injectable()
 export class GenerationJobsWorkflowService implements OnModuleDestroy {
   private readonly logger = new Logger(GenerationJobsWorkflowService.name);
-  private readonly intervals = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly intervals = new Map<
+    string,
+    ReturnType<typeof setInterval>
+  >();
   private readonly processing = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
   private readonly completion = new Map<
@@ -86,7 +90,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
   private async tick(jobId: string): Promise<boolean> {
     let job = await this.generationJobRepo.findOneOrFail({
       where: {
-        id: jobId
+        id: jobId,
       },
       relations: {
         user: true,

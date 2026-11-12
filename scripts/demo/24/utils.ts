@@ -92,6 +92,8 @@ export class Helper24 extends Helper {
       },
     );
 
+    console.log(response);
+
     if (!response.ok) {
       return {
         ok: false,
