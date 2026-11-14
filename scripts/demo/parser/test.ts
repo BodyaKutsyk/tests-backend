@@ -20,15 +20,15 @@ async function main() {
     const jwtPayload = helper.decodeJwtPayload(r1AccessToken);
     const userId = jwtPayload.sub as string;
 
-    const path = new URL('./mock.pdf', import.meta.url);
+    const path = new URL('./mock2.docx', import.meta.url);
     const pdfBuffer = await readFile(path);
 
     const results = await helper.postFiles(
       [
         {
           buffer: pdfBuffer,
-          filename: 'sample.pdf',
-          contentType: 'application/pdf',
+          filename: 'sample.docx',
+          contentType: 'application/msword',
         },
       ],
       {
@@ -48,7 +48,7 @@ async function main() {
       {
         files: ids,
         questionType: QuestionType.MultipleChoice,
-        questionCount: 20,
+        questionCount: 10,
       },
       randomUUID(),
       r1AccessToken,

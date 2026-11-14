@@ -23,6 +23,9 @@ export const envSchema = z.object({
   DOCLING_API_KEY: z.string(),
   DOCLING_PORT: portType,
   DOCLING_HOST: z.string(),
+  OLLAMA_PORT: portType,
+  OLLAMA_MODEL: z.string(),
+  OLLAMA_HOST: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

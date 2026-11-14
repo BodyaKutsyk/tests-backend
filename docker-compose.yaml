@@ -26,6 +26,7 @@ services:
       REDIS_CACHE_HOST: redis-cache
       REDIS_QUEUE_HOST: redis-queue
       DOCLING_HOST: docling
+      OLLAMA_HOST: ollama
       INFISICAL_ENV: prod
     extra_hosts: *infisical-hosts
     ports:
@@ -40,6 +41,8 @@ services:
         condition: service_healthy
       redis-queue:
         condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
     secrets:
       - db_password
   db:
@@ -273,7 +276,7 @@ services:
     healthcheck:
       test: ["NONE"]
   docling:
-    image: ghcr.io/docling-project/docling-serve-cpu:v1.38.2
+    image: quay.io/docling-project/docling-serve-cpu:v1.38.2
     restart: unless-stopped
     ports:
       - "${DOCLING_PORT}:${DOCLING_PORT}"
@@ -282,6 +285,44 @@ services:
       DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "1"
       OMP_NUM_THREADS: "4"
       DOCLING_SERVE_API_KEY: ${DOCLING_API_KEY:?API key is required}
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:${OLLAMA_PORT}
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_CONTEXT_LENGTH: "4096"
+      OLLAMA_KEEP_ALIVE: "5m"
+    ports:
+      - "${OLLAMA_PORT}:${OLLAMA_PORT}"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:${OLLAMA_PORT}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:?OLLAMA_MODEL is required}
+    command: ["pull", "${OLLAMA_MODEL}"]
+    restart: "no"
 
 secrets:
   db_password:
@@ -294,3 +335,4 @@ volumes:
   rabbitmq-log:
   redis-queue-data:
   redis-cache-data:
+  ollama_data:

@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  GenerationJob,
-  GenerationJobStatus,
-} from '../../entities/generation-job.js';
+import { GenerationJob } from '../../entities/generation-job.js';
 import { Repository } from 'typeorm';
 import { DoclingService } from '../../docling/docling.service.js';
 import { NotFoundProblem } from '../../exceptions/problem-errors.js';
@@ -18,7 +15,7 @@ export class TestsParserWorkerService {
     private readonly documentContentsRepo: Repository<DocumentContents>,
     private readonly doclingService: DoclingService,
   ) {}
-  async parse(id: string) {
+  async parse(id: string): Promise<void> {
     const job = await this.generationJobRepo.findOne({
       where: { id },
       relations: { documents: true, user: true },
@@ -39,16 +36,7 @@ export class TestsParserWorkerService {
          ON CONFLICT (id) DO NOTHING`,
         [document.id, 1, markdown],
       );
+
     }
-
-    const update = await this.generationJobRepo
-      .createQueryBuilder()
-      .update(GenerationJob)
-      .set({ status: GenerationJobStatus.Parsing })
-      .where({ id })
-      .returning('*')
-      .execute();
-
-    return update.raw[0];
   }
 }

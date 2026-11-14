@@ -4,6 +4,9 @@ export const GENERATION_JOBS_DLX = 'generation_jobs_dlx';
 export const GENERATION_JOBS_PREFETCH = 4;
 export const GENERATION_JOBS_ROUTING_KEYS = {
   CREATED: 'generation_jobs.created',
+  QUEUED: 'generation_jobs.queued',
+  PARSED: 'generation_jobs.parsed',
+  GENERATED: 'generation_jobs.generated',
 };
 
 export const REDIS_USER_TESTS_CACHE_KEY = `user-tests`;

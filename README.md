@@ -237,7 +237,9 @@ The broker reported that all required verification results were published and su
 | `DOCLING_API_KEY`         | Docling API secret key                                                           |
 | `DOCLING_PORT`            | Port used to connect to the Docling                                              |
 | `DOCLING_HOST`            | Host used to connect to the Docling                                              |
-
+| `OLLAMA_MODEL`            | AI model used in Ollama                                                          |
+| `OLLAMA_PORT`             | Port used to connect to the Ollama                                               |
+| `OLLAMA_HOST`             | Host used to connect to the Ollama                                               |
 ### How to start
 
 1. Create an `.env.infisical` file base on `.env.infisical.example`

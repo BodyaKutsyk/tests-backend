@@ -14,6 +14,7 @@ import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js
 import { GenerationJobsService } from './generation-jobs.service.js';
 import { DoclingModule } from '../docling/docling.module.js';
 import { DocumentContents } from '../entities/document-contents.js';
+import { LlmModule } from '../llm/llm.module.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DocumentContents } from '../entities/document-contents.js';
     RedisCacheModule,
     TypeOrmModule.forFeature([GenerationJob, DocumentContents]),
     DoclingModule,
+    LlmModule,
   ],
   controllers: [],
   providers: [

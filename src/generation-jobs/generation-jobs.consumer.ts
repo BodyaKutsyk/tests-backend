@@ -48,6 +48,7 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
   async startConsuming(beforeConsume?: (channel: Channel) => Promise<void>) {
     this.channel = await this.rabbitMQService.createConsumerChannel();
     await this.topology.setup(this.channel);
+    await this.channel.prefetch(1);
     await beforeConsume?.(this.channel);
 
     await this.channel.consume(
@@ -82,7 +83,11 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
           if (isNew) await this.workflow.process(event.id);
           this.channel.ack(data);
           this.acknowledgementsSubject.next(event);
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            `Failed to process generation job event ${event.id}`,
+            error,
+          );
           this.channel.nack(data, false, false);
           this.rejectionsSubject.next(event);
         }
