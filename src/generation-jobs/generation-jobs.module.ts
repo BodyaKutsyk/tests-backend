@@ -13,14 +13,14 @@ import { RedisCacheModule } from '../redis/cache/cache.module.js';
 import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js';
 import { GenerationJobsService } from './generation-jobs.service.js';
 import { DoclingModule } from '../docling/docling.module.js';
-import { DocumentsModule } from '../documents/documents.module.js';
+import { DocumentContents } from '../entities/document-contents.js';
 
 @Module({
   imports: [
     RabbitMqModule,
     InboxModule,
     RedisCacheModule,
-    TypeOrmModule.forFeature([GenerationJob]),
+    TypeOrmModule.forFeature([GenerationJob, DocumentContents]),
     DoclingModule,
   ],
   controllers: [],

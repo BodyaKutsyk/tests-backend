@@ -1,47 +1,71 @@
-import { Injectable } from '@nestjs/common';
-import { DoclingClient } from '@docling/docling-client';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  DoclingClient,
+  type ConvertDocumentsOptions,
+} from '@docling/docling-client';
 import { Env } from '../config/env.schema.js';
 import { ConfigService } from '@nestjs/config';
-import type { DoclingDocument } from '@docling/docling-core';
-import { blocksToMarkdown, normalizeDocling } from './utils/mapper.js';
+import { extname } from 'node:path';
+import { readPlainTextMarkdown, toMarkdown } from './utils/mapper.js';
 
 @Injectable()
 export class DoclingService {
-  private readonly client: DoclingClient<DoclingDocument>;
+  private readonly logger = new Logger(DoclingService.name);
+  private readonly client: DoclingClient;
   constructor(configService: ConfigService<Env, true>) {
     const port = configService.get('DOCLING_PORT');
     const host = configService.get('DOCLING_HOST');
     const apiKey = configService.get('DOCLING_API_KEY');
-    const url = `http://${host}:${port}`;
-
-    console.log(host);
-
     this.client = new DoclingClient({
-      baseUrl: url,
+      baseUrl: `http://${host}:${port}`,
       apiKey,
     });
   }
 
-  async parse(filePath: string) {
-    const start = new Date().getTime();
-    const converted = await this.client.convert(filePath, {
-      options: {
-        do_ocr: true,
-        do_table_structure: true,
-        table_mode: 'accurate',
-      },
-    });
+  async parse(filePath: string): Promise<string> {
+    const start = Date.now();
+    const extension = extname(filePath).toLowerCase();
 
-    const document = converted.document;
-    const blocks = normalizeDocling(document);
-    const markdown = blocksToMarkdown(blocks);
-
-    console.log(blocks, markdown);
-    console.log(`took: ${new Date().getTime() - start} ms`);
-
-    return {
-      blocks,
-      markdown,
+    if (extension === '.txt' || extension === '.md') {
+      return readPlainTextMarkdown(filePath);
+    }
+    const options: ConvertDocumentsOptions = {
+      to_formats: ['md'],
+      image_export_mode: 'placeholder',
+      do_ocr: false,
+      do_table_structure: true,
+      table_mode: 'accurate',
     };
+    let markdown = await this.convert(filePath, options);
+    const canUseOcr = [
+      '.pdf',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.tif',
+      '.tiff',
+      '.bmp',
+      '.webp',
+    ].includes(extension);
+    if (!markdown.trim() && canUseOcr) {
+      markdown = await this.convert(filePath, { ...options, do_ocr: true });
+    }
+    if (!markdown.trim()) {
+      throw new Error(`Docling did not extract text from ${filePath}`);
+    }
+    this.logger.log(`Parsed ${filePath} in ${Date.now() - start} ms`);
+    return markdown;
+  }
+
+  private async convert(
+    filePath: string,
+    options: ConvertDocumentsOptions,
+  ): Promise<string> {
+    const job = await this.client.submitSource(filePath, {
+      options,
+      target: { kind: 'inbody' },
+    });
+    await job.wait();
+    return toMarkdown(await this.client.getResult(job.taskId));
   }
 }
