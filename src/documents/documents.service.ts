@@ -13,8 +13,8 @@ import {
   UploadFilesResponseDto,
 } from './types/document.dto.js';
 import { NotFoundProblem } from '../exceptions/problem-errors.js';
+import { DocumentsPublisher } from './documents.publisher.js';
 
-// will be replaced with JWT
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -22,6 +22,7 @@ export class DocumentsService {
     private readonly documentRepo: Repository<Document>,
     @Inject(QuotasService)
     private readonly quotaService: QuotasService,
+    private readonly documentsPublisher: DocumentsPublisher,
   ) {}
 
   async upload(
@@ -43,23 +44,27 @@ export class DocumentsService {
       const path = join(directory, fileName);
 
       try {
-        const mimeType = await determineMimeType(
-          file.buffer,
-          file.originalname,
-        );
+        return this.documentRepo.manager.transaction(async (manager) => {
+          const mimeType = await determineMimeType(
+            file.buffer,
+            file.originalname,
+          );
 
-        await writeFile(path, file.buffer);
-        const document = await this.documentRepo.save(
-          this.documentRepo.create({
-            storageKey: fileName,
-            name: file.originalname,
-            mimeType,
-            size: file.size,
-            user: { id: userId },
-          }),
-        );
+          await writeFile(path, file.buffer);
+          const document = await manager.save(
+            this.documentRepo.create({
+              storageKey: fileName,
+              name: file.originalname,
+              mimeType,
+              size: file.size,
+              user: { id: userId },
+            }),
+          );
 
-        return { id: document.id, fileName, path };
+          await this.documentsPublisher.uploaded(document, manager);
+
+          return { id: document.id, fileName, path };
+        });
       } catch (e) {
         await rm(path, { force: true });
         throw e;

@@ -30,6 +30,21 @@ async function main() {
           filename: 'sample.docx',
           contentType: 'application/msword',
         },
+        {
+          buffer: pdfBuffer,
+          filename: 'sample.docx',
+          contentType: 'application/msword',
+        },
+        {
+          buffer: pdfBuffer,
+          filename: 'sample.docx',
+          contentType: 'application/msword',
+        },
+        {
+          buffer: pdfBuffer,
+          filename: 'sample.docx',
+          contentType: 'application/msword',
+        },
       ],
       {
         Authorization: `Bearer ${r1AccessToken}`,
@@ -44,15 +59,15 @@ async function main() {
 
     const ids = results.data.items.map((item) => item.id);
 
-    const result = await helper.createTest(
-      {
-        files: ids,
-        questionType: QuestionType.MultipleChoice,
-        questionCount: 10,
-      },
-      randomUUID(),
-      r1AccessToken,
-    );
+    // const result = await helper.createTest(
+    //   {
+    //     files: ids,
+    //     questionType: QuestionType.MultipleChoice,
+    //     questionCount: 10,
+    //   },
+    //   randomUUID(),
+    //   r1AccessToken,
+    // );
   } catch (e) {
     console.log(e);
   } finally {

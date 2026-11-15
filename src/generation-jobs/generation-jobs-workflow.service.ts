@@ -5,7 +5,6 @@ import {
   GenerationJobStatus,
 } from '../entities/generation-job.js';
 import { Repository } from 'typeorm';
-import { TestsParserWorkerService } from './workers/tests-parser-worker.service.js';
 import { TestsGeneratorWorkerService } from './workers/tests-generator-worker.service.js';
 import { RedisCacheService } from '../redis/cache/cache.service.js';
 import { getRedisUserTestsCacheKey } from '../contracts/generation/constants.js';
@@ -22,7 +21,6 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
   constructor(
     @InjectRepository(GenerationJob)
     private readonly generationJobRepo: Repository<GenerationJob>,
-    private readonly parserWorker: TestsParserWorkerService,
     private readonly generatorWorker: TestsGeneratorWorkerService,
     private readonly redisCacheService: RedisCacheService,
   ) {}
@@ -39,7 +37,7 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     const claim = await this.generationJobRepo
       .createQueryBuilder()
       .update(GenerationJob)
-      .set({ status: GenerationJobStatus.Parsing })
+      .set({ status: GenerationJobStatus.Generated })
       .where('id = :id', { id: jobId })
       .andWhere('status = :status', { status: GenerationJobStatus.Queued })
       .returning('id')
@@ -48,14 +46,12 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
     if (!claim.raw.length) return;
 
     try {
-      await this.parserWorker.parse(jobId);
-
       const generationStarted = await this.generationJobRepo
         .createQueryBuilder()
         .update(GenerationJob)
-        .set({ status: GenerationJobStatus.Generating })
+        .set({ status: GenerationJobStatus.Generated })
         .where('id = :id', { id: jobId })
-        .andWhere('status = :status', { status: GenerationJobStatus.Parsing })
+        .andWhere('status = :status', { status: GenerationJobStatus.Queued })
         .returning('id')
         .execute();
 
@@ -69,35 +65,62 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
         job.questionType,
       );
 
-      if (!questions.length) throw new Error(`No valid questions generated for job ${jobId}`);
+      if (!questions.length)
+        throw new Error(`No valid questions generated for job ${jobId}`);
 
       await this.generationJobRepo.manager.transaction(async (manager) => {
-        const test = await manager.save(Test, manager.create(Test, {
-          name: (job.documents[0]?.name ?? 'Generated test').slice(0, 255),
-          user: job.user,
-        }));
+        const test = await manager.save(
+          Test,
+          manager.create(Test, {
+            name: (job.documents[0]?.name ?? 'Generated test').slice(0, 255),
+            user: job.user,
+          }),
+        );
         for (const document of job.documents) {
-          await manager.createQueryBuilder().relation(Document, 'tests').of(document.id).add(test.id);
+          await manager
+            .createQueryBuilder()
+            .relation(Document, 'tests')
+            .of(document.id)
+            .add(test.id);
         }
         for (const generated of questions) {
-          const question = await manager.save(Question, manager.create(Question, {
-            test,
-            value: generated.text,
-            question_type: generated.type,
-          }));
+          const question = await manager.save(
+            Question,
+            manager.create(Question, {
+              test,
+              value: generated.text,
+              question_type: generated.type,
+            }),
+          );
           if (generated.options.length) {
-            await manager.save(AnswerOption, generated.options.map((option) =>
-              manager.create(AnswerOption, { question, value: option.text, isCorrect: option.isCorrect }),
-            ));
+            await manager.save(
+              AnswerOption,
+              generated.options.map((option) =>
+                manager.create(AnswerOption, {
+                  question,
+                  value: option.text,
+                  isCorrect: option.isCorrect,
+                }),
+              ),
+            );
           }
         }
-        const completed = await manager.createQueryBuilder()
+        const completed = await manager
+          .createQueryBuilder()
           .update(GenerationJob)
-          .set({ status: GenerationJobStatus.Done, test, processed: questions.length })
-          .where('id = :id AND status = :status', { id: jobId, status: GenerationJobStatus.Generating })
+          .set({
+            status: GenerationJobStatus.Done,
+            test,
+            processed: questions.length,
+          })
+          .where('id = :id AND status = :status', {
+            id: jobId,
+            status: GenerationJobStatus.Generated,
+          })
           .returning('id')
           .execute();
-        if (!completed.raw.length) throw new Error(`Could not mark job ${jobId} as done`);
+        if (!completed.raw.length)
+          throw new Error(`Could not mark job ${jobId} as done`);
       });
     } catch (error) {
       await this.generationJobRepo
@@ -105,11 +128,8 @@ export class GenerationJobsWorkflowService implements OnModuleDestroy {
         .update(GenerationJob)
         .set({ status: GenerationJobStatus.Failed })
         .where('id = :id', { id: jobId })
-        .andWhere('status IN (:...statuses)', {
-          statuses: [
-            GenerationJobStatus.Parsing,
-            GenerationJobStatus.Generating,
-          ],
+        .andWhere('status = :status', {
+          status: GenerationJobStatus.Generated,
         })
         .execute();
 

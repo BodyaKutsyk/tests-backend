@@ -16,8 +16,7 @@ import { QuestionType } from '../types/temporary.js';
 
 export enum GenerationJobStatus {
   Queued = 'queued',
-  Parsing = 'parsing',
-  Generating = 'generating',
+  Generated = 'generated',
   Done = 'done',
   Failed = 'failed',
 }

@@ -25,9 +25,6 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
     new Subject<GenerationJobCreatedEvent>();
   private readonly rejectionsSubject = new Subject<GenerationJobCreatedEvent>();
   private readonly logger = new Logger(this.constructor.name);
-  readonly deliveries$ = this.deliveriesSubject.asObservable();
-  readonly acknowledgements$ = this.acknowledgementsSubject.asObservable();
-  readonly rejections$ = this.rejectionsSubject.asObservable();
 
   constructor(
     @Inject(RabbitMqService)
@@ -48,7 +45,6 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
   async startConsuming(beforeConsume?: (channel: Channel) => Promise<void>) {
     this.channel = await this.rabbitMQService.createConsumerChannel();
     await this.topology.setup(this.channel);
-    await this.channel.prefetch(1);
     await beforeConsume?.(this.channel);
 
     await this.channel.consume(

@@ -130,7 +130,6 @@ describe('TestsController (e2e)', () => {
           const event = JSON.parse(dataLine.slice(5).trim());
 
           expect(event.id).toBe(generationJobId);
-          expect(event.status).toBe(GenerationJobStatus.Parsing);
 
           return;
         }
