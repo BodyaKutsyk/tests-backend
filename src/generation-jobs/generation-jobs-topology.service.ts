@@ -6,6 +6,8 @@ import {
   GENERATION_JOBS_EXCHANGE,
   GENERATION_JOBS_PREFETCH,
   GENERATION_JOBS_ROUTING_KEYS,
+  GENERATION_JOBS_RETRY_QUEUE,
+  GENERATION_JOBS_RETRY_DELAY_MS,
 } from '../contracts/generation/constants.js';
 
 @Injectable()
@@ -29,6 +31,14 @@ export class GenerationJobsTopologyService {
     });
 
     await channel.assertExchange(GENERATION_JOBS_EXCHANGE, 'topic');
+    await channel.assertQueue(GENERATION_JOBS_RETRY_QUEUE, {
+      durable: true,
+      arguments: {
+        'x-message-ttl': GENERATION_JOBS_RETRY_DELAY_MS,
+        'x-dead-letter-exchange': GENERATION_JOBS_EXCHANGE,
+        'x-dead-letter-routing-key': GENERATION_JOBS_ROUTING_KEYS.CREATED,
+      },
+    });
     await channel.bindQueue(
       GENERATION_JOBS_ROUTING_KEYS.CREATED,
       GENERATION_JOBS_EXCHANGE,

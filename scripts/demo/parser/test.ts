@@ -2,6 +2,7 @@ import { Helper24 } from '../24/utils.js';
 import { randomUUID } from 'crypto';
 import { QuestionType } from '../../../src/types/temporary.js';
 import { readFile } from 'node:fs/promises';
+import { asyncTimeout } from '../../../src/utils/async-timeout.js';
 
 async function main() {
   const helper = new Helper24();
@@ -30,21 +31,21 @@ async function main() {
           filename: 'sample.docx',
           contentType: 'application/msword',
         },
-        {
-          buffer: pdfBuffer,
-          filename: 'sample.docx',
-          contentType: 'application/msword',
-        },
-        {
-          buffer: pdfBuffer,
-          filename: 'sample.docx',
-          contentType: 'application/msword',
-        },
-        {
-          buffer: pdfBuffer,
-          filename: 'sample.docx',
-          contentType: 'application/msword',
-        },
+        // {
+        //   buffer: pdfBuffer,
+        //   filename: 'sample.docx',
+        //   contentType: 'application/msword',
+        // },
+        // {
+        //   buffer: pdfBuffer,
+        //   filename: 'sample.docx',
+        //   contentType: 'application/msword',
+        // },
+        // {
+        //   buffer: pdfBuffer,
+        //   filename: 'sample.docx',
+        //   contentType: 'application/msword',
+        // },
       ],
       {
         Authorization: `Bearer ${r1AccessToken}`,
@@ -59,15 +60,17 @@ async function main() {
 
     const ids = results.data.items.map((item) => item.id);
 
-    // const result = await helper.createTest(
-    //   {
-    //     files: ids,
-    //     questionType: QuestionType.MultipleChoice,
-    //     questionCount: 10,
-    //   },
-    //   randomUUID(),
-    //   r1AccessToken,
-    // );
+    await asyncTimeout(10000);
+
+    const result = await helper.createTest(
+      {
+        files: ids,
+        questionType: QuestionType.MultipleChoice,
+        questionCount: 10,
+      },
+      randomUUID(),
+      r1AccessToken,
+    );
   } catch (e) {
     console.log(e);
   } finally {

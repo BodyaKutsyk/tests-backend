@@ -60,8 +60,9 @@ export class DocumentsConsumer implements OnApplicationBootstrap {
 
             await this.documentParserService.parseAndSave(event.id, manager);
           });
+          this.channel.ack(data);
         } catch {
-          this.channel.nack(data, true, false);
+          this.channel.nack(data, false, false);
         }
       },
     );

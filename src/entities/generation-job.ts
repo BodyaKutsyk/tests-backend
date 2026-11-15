@@ -13,6 +13,7 @@ import { User } from './user.js';
 import { Test } from './test.js';
 import { Document } from './document.js';
 import { QuestionType } from '../types/temporary.js';
+import type { GeneratedQuestion } from '../generation-jobs/workers/tests-generator-worker.service.js';
 
 export enum GenerationJobStatus {
   Queued = 'queued',
@@ -38,6 +39,13 @@ export class GenerationJob extends Base {
 
   @Column({ type: 'int', default: 0 })
   processed: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  generationCheckpoint: {
+    questions: GeneratedQuestion[];
+    attempts: number;
+    emptyBatches: number;
+  } | null;
 
   @OneToOne(() => Test, (test) => test.generationJob, {
     nullable: true,

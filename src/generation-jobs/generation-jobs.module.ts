@@ -9,7 +9,6 @@ import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
 import { GenerationJobsTopologyService } from './generation-jobs-topology.service.js';
 import { InboxModule } from '../inbox/inbox.module.js';
 import { RedisCacheModule } from '../redis/cache/cache.module.js';
-import { GenerationJobsWorkerService } from './generation-jobs-worker.service.js';
 import { GenerationJobsService } from './generation-jobs.service.js';
 import { DoclingModule } from '../docling/docling.module.js';
 import { DocumentContents } from '../entities/document-contents.js';
@@ -26,21 +25,18 @@ import { OutboxModule } from '../outbox/outbox.module.js';
     DoclingModule,
     LlmModule,
   ],
-  controllers: [],
   providers: [
     GenerationJobsTopologyService,
     GenerationJobsConsumer,
     GenerationJobsEventService,
     GenerationJobsWorkflowService,
     TestsGeneratorWorkerService,
-    GenerationJobsWorkerService,
     GenerationJobsService,
   ],
   exports: [
     GenerationJobsEventService,
     GenerationJobsWorkflowService,
     GenerationJobsConsumer,
-    GenerationJobsWorkerService,
     GenerationJobsService,
   ],
 })
