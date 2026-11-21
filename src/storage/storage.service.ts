@@ -19,6 +19,7 @@ interface CreatePresignedUrlProps {
 
 // in seconds
 const UPLOAD_URL_EXPIRATION = 300;
+export const DEMO_MD5 = 'AAAAAAAAAAAAAAAAAAAAAA==';
 
 @Injectable()
 export class StorageService {
@@ -56,7 +57,7 @@ export class StorageService {
     });
 
     return getSignedUrl(this.s3Client, command, {
-      expiresIn: UPLOAD_URL_EXPIRATION,
+      expiresIn: md5 === DEMO_MD5 ? 1 : UPLOAD_URL_EXPIRATION,
     });
   }
 

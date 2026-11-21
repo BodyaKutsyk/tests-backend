@@ -86,6 +86,7 @@ export class DocumentsController {
     return this.documentsService.remove(documentIds);
   }
 
+  @HttpCode(HttpStatus.OK)
   @Post('intent')
   async intendUpload(
     @Body() dto: CreateBulkPresignedUploadDto,
@@ -100,6 +101,7 @@ export class DocumentsController {
     return [...successful, ...failed];
   }
 
+  @HttpCode(HttpStatus.OK)
   @Post('commit')
   async commitBulkUpload(
     @Body() dto: CommitBulkUploadDto,

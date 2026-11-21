@@ -161,7 +161,7 @@ export class DocumentsService {
       .execute();
 
     if (result.raw.length > 0) {
-      return this.documentRepo.create(result.raw[0] as Document);
+      return this.documentRepo.findOneByOrFail({ id: result.raw[0].id });
     }
 
     return this.documentRepo.findOneByOrFail({
@@ -205,9 +205,9 @@ export class DocumentsService {
           };
         case DocumentStatus.Pending:
           const uploadUrl = await this.storageService.createUploadUrl({
-            key: storageKey,
+            key: document.storageKey,
             md5: document.contentMd5,
-            contentType: document.contentMd5,
+            contentType: document.mimeType,
           });
 
           return {
