@@ -64,23 +64,23 @@ async function crashRelay() {
       check();
     });
 
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      const rows = await helper.getOutboxByJobId(result.id);
+      if (rows.some((row) => row.publishedAt) && await helper.getInboxByJobId(result.id)) break;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
     const createdJobs = await helper.getJobs(result.id);
     const createdOutboxes = await helper.getOutboxByJobId(result.id);
-    const applied = await helper.getInboxByJobId(result.id);
+    const processed = await helper.getInboxByJobId(result.id);
+    const applied = Number(createdJobs.some((job) => job.status !== 'queued'));
     const received = deliveries.filter((event) => event.id === result.id);
 
     const published = createdOutboxes.filter(
       (outbox) => outbox.publishedAt !== null,
     );
-    const processed = Math.max(
-      ...createdOutboxes.map((outbox) => outbox.attempts),
-      0,
-    );
-
-    console.log('Consumer received:', received);
-    console.log(
-      `generationJobs=${createdJobs.length} outbox=${createdOutboxes.length} published=${published.length} deliveries=${received.length} applied=${applied} effect=${createdOutboxes.length} processed=${processed}`,
-    );
+    console.log(`published=${published.length}\ndeliveries=${received.length}\napplied=${applied}\neffect=${applied}\nprocessed=${processed}`);
+    if (published.length !== 1 || received.length < 2 || applied !== 1 || processed !== 1) throw new Error('Relay invariant failed');
   } catch (e) {
     console.error(e);
     process.exitCode = 1;

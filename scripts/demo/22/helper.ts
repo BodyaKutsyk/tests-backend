@@ -78,7 +78,7 @@ export class Helper {
   async createTest(
     data: CreateTest,
     idempotencyKey: string,
-    userId?: string,
+    userId: string,
   ): Promise<CreateTestResponse> {
     const response = await fetch(
       `http://localhost:${Number(process.env.API_PORT || 3000)}/tests`,
@@ -88,7 +88,7 @@ export class Helper {
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idempotencyKey,
-          ...(userId ? { 'user-id': userId } : {}),
+          'user-id': userId,
         },
       },
     );

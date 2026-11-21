@@ -1,56 +1,37 @@
-import { CreateTest, Helper } from './helper.js';
-import { QuestionType } from '../../../src/types/temporary.js';
 import { randomUUID } from 'crypto';
-import { asyncTimeout } from '../../../src/utils/async-timeout.js';
+import { GenerationJob } from '../../../src/entities/generation-job.js';
+import { Outbox } from '../../../src/entities/outbox.js';
+import { QuestionType } from '../../../src/types/temporary.js';
 import { BRAKE_TRANSACTION_NUM } from '../../../src/utils/demos.js';
-
-const payload: CreateTest = {
-  questionCount: BRAKE_TRANSACTION_NUM,
-  questionType: QuestionType.MultipleChoice,
-  files: [],
-};
+import { Helper } from './helper.js';
 
 async function crashWrite() {
   const helper = new Helper();
-  const dataSource = helper.dataSource;
-  const idempotencyKey = randomUUID();
   try {
-    await dataSource.initialize();
-
+    await helper.dataSource.initialize();
     const user = await helper.getUserWithDocuments();
+    if (!user) throw new Error('No users with documents');
 
-    if (!user) {
-      throw new Error('No users with documents');
-    }
 
-    payload.files.push(user.documents[0].id);
-    const result = await helper.createTest(payload, idempotencyKey);
-    const createdJobs = await helper.getJobs(result.id);
-    const createdOutboxes = await helper.getOutboxByJobId(result.id);
-
-    if (createdJobs.length > 0 || createdOutboxes.length > 0) {
-      process.exit(1);
-    }
-
-    await asyncTimeout(1000);
-
-    const published = createdOutboxes.filter(
-      (outbox) => outbox.publishedAt !== null,
-    );
-    const processed = Math.max(
-      ...createdOutboxes.map((outbox) => outbox.attempts),
-      0,
-    );
-
-    console.log(
-      `write-failed=1 generationJobs=${createdJobs.length} outbox=${createdOutboxes.length} published=${published.length} effect=${createdOutboxes.length} deliveries=${processed}`,
-    );
-
-    process.exit(0);
-  } catch (e) {
-    console.log(e);
+    const jobs = helper.dataSource.getRepository(GenerationJob);
+    const outbox = helper.dataSource.getRepository(Outbox);
+    const beforeJobs = await jobs.countBy({ questionCount: BRAKE_TRANSACTION_NUM, user: { id: user.id } });
+    const beforeOutbox = await outbox.count();
+    const response = await fetch(`http://localhost:${Number(process.env.API_PORT || 3000)}/tests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'user-id': user.id, 'X-Idempotency-Key': randomUUID() },
+      body: JSON.stringify({ questionCount: BRAKE_TRANSACTION_NUM, questionType: QuestionType.MultipleChoice, files: [user.documents[0].id] }),
+    });
+    if (response.status !== 500) throw new Error(`Expected transaction failure (500), got ${response.status}`);
+    const newJobs = await jobs.countBy({ questionCount: BRAKE_TRANSACTION_NUM, user: { id: user.id } }) - beforeJobs;
+    const newOutbox = await outbox.count() - beforeOutbox;
+    console.log(`write-failed=1\norders=${newJobs}\noutbox=${newOutbox}\npublished=0\ndeliveries=0\neffect=0`);
+    if (newJobs !== 0 || newOutbox !== 0) throw new Error('Transaction rollback failed');
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
   } finally {
-    await dataSource.destroy();
+    if (helper.dataSource.isInitialized) await helper.dataSource.destroy();
   }
 }
 

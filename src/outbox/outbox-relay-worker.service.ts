@@ -73,7 +73,7 @@ export class OutboxRelayWorkerService
       pendingJobs.forEach((job) => {
         job.attempts++;
 
-        if (job.aggregateType === BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE) {
+        if (job.aggregateType === BRAKE_OUTBOX_RELAY_AGGREGATE_TYPE && job.attempts === 1) {
           disableRelay.push(job.id);
         }
       });

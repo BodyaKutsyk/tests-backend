@@ -10,7 +10,7 @@ import { Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
 import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.js';
-import { GenerationJob } from '../entities/generation-job.js';
+import { GenerationJob, GenerationJobStatus } from '../entities/generation-job.js';
 import { InboxService } from '../inbox/inbox.service.js';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
 import { GENERATION_JOB_DELIVERIES_CHANNEL } from '../utils/demos.js';
@@ -76,13 +76,23 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
               { messageId: event.id, consumer: this.constructor.name },
               entityManager,
             );
-            return inbox.raw.length > 0;
+            if (!inbox.raw.length) return false;
+            const result = await entityManager.getRepository(GenerationJob).update(
+              { id: event.id, status: GenerationJobStatus.Queued },
+              { status: GenerationJobStatus.Parsing },
+            );
+            if (result.affected !== 1) throw new Error('Generation job is not queued');
+            return true;
           });
 
           if (isNew) await this.workflow.process(event.id);
           this.channel.ack(data);
           this.acknowledgementsSubject.next(event);
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            `Failed to process generation job ${event.id}`,
+            error instanceof Error ? error.stack : String(error),
+          );
           this.channel.nack(data, false, false);
           this.rejectionsSubject.next(event);
         }
