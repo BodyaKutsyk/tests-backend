@@ -265,6 +265,24 @@ Run to apply optimization indexes:
 docker exec -i postgres psql -U ${POSTGRES_ADMIN} ${POSTGRES_DB} < db/indexes.sql
 ```
 
+## Outbox and Idempotency
+
+The generation job and its outbox event are created in the same transaction. The relay selects unpublished events with `SKIP LOCKED`, publishes them to RabbitMQ, and updates `published_at` after confirmation. The consumer inserts the inbox record and transitions the job from `queued` to `parsing` in one transaction; a duplicate message does not repeat the transition.
+
+Results from the demo runs:
+
+| Demo | Observed values |
+| --- | --- |
+| `demo:outbox` | `requests=2`, `orders=1`, `outbox=1`, `published=1`, `deliveries=1`, `effect=1`, `processed=1` |
+| `demo:crash-write` | `write-failed=1`, `orders=0`, `outbox=0`, `published=0`, `deliveries=0`, `effect=0` |
+| `demo:crash-relay` | `published=1`, `deliveries=2`, `applied=1`, `effect=1`, `processed=1` |
+
+In these demos, `orders` counts generation jobs. `processed` counts inbox records, and the effect is measured by the job's state transition. In `crash-relay`, the first `published_at` update is deliberately skipped after publication, causing the relay to publish the event again.
+
+The consumer's current effect is persisting the `parsing` state; a separate workflow performs the remaining generation steps. Automatic workflow recovery after a process restart has not yet been implemented.
+
+The order `publish` → `UPDATE published_at` matters: marking an event as published before a failed publication would prevent the relay from retrying and cause message loss. A failure after publication can cause a duplicate, which the consumer deduplicates through the inbox.
+
 ## Grading
 
 ### 0. Prepare Environment Variables                                                                                                                                                                                         

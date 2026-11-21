@@ -8,8 +8,8 @@ x-infisical-env: &infisical-env
 x-infisical-hosts: &infisical-hosts
   - "host.docker.internal:host-gateway"
 
-include:
-  - docker-compose.pact.yml
+#include:
+#  - docker-compose.pact.yml
 
 services:
   api:
