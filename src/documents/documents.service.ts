@@ -1,19 +1,31 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Document } from '../entities/document.js';
+import { Document, DocumentStatus } from '../entities/document.js';
 import { Repository } from 'typeorm';
 import { determineMimeType } from './utils/determine-mime-type.js';
 import { QuotasService } from '../quotas/quotas.service.js';
 import { QuotaType } from '../entities/quota.js';
 import {
+  CommitBulkUploadDto,
+  DocumentUploadIntentDto,
   FileUploadResponse,
   UploadFilesResponseDto,
 } from './types/document.dto.js';
 import { NotFoundProblem } from '../exceptions/problem-errors.js';
 import { DocumentsPublisher } from './documents.publisher.js';
+import { StorageService } from '../storage/storage.service.js';
+import {
+  DocumentCommitResponse,
+  IntentBulkUploadResponse,
+} from './types/response.js';
+
+interface CommitUploadProps {
+  userId: string;
+  documentId: string;
+}
 
 @Injectable()
 export class DocumentsService {
@@ -23,6 +35,7 @@ export class DocumentsService {
     @Inject(QuotasService)
     private readonly quotaService: QuotasService,
     private readonly documentsPublisher: DocumentsPublisher,
+    private readonly storageService: StorageService,
   ) {}
 
   async upload(
@@ -135,5 +148,165 @@ export class DocumentsService {
     }
 
     await this.documentRepo.softDelete(documentIds);
+  }
+
+  async createOrGetDocument(document: Document) {
+    const result = await this.documentRepo
+      .createQueryBuilder()
+      .insert()
+      .into(Document)
+      .values(document)
+      .orIgnore()
+      .returning('*')
+      .execute();
+
+    if (result.raw.length > 0) {
+      return this.documentRepo.create(result.raw[0] as Document);
+    }
+
+    return this.documentRepo.findOneByOrFail({
+      contentMd5: document.contentMd5,
+      user: { id: document.user.id },
+    });
+  }
+
+  async initUploadIntent(
+    documentDto: DocumentUploadIntentDto,
+    userId: string,
+  ): Promise<IntentBulkUploadResponse> {
+    try {
+      const storageKey = this.storageService.generateUploadUrlKey(
+        userId,
+        extname(documentDto.name),
+      );
+      const documentPayload = this.documentRepo.create({
+        storageKey,
+        name: documentDto.name,
+        size: documentDto.size,
+        mimeType: documentDto.contentType,
+        contentMd5: documentDto.contentMd5,
+        user: { id: userId },
+      });
+
+      const document = await this.createOrGetDocument(documentPayload);
+
+      switch (document.status) {
+        case DocumentStatus.Failed:
+          return {
+            clientId: documentDto.clientId,
+            errors: ['Failed to create presigned url for this document'],
+            status: DocumentStatus.Failed,
+          };
+        case DocumentStatus.Completed:
+          return {
+            id: document.id,
+            clientId: documentDto.clientId,
+            status: DocumentStatus.Completed,
+          };
+        case DocumentStatus.Pending:
+          const uploadUrl = await this.storageService.createUploadUrl({
+            key: storageKey,
+            md5: document.contentMd5,
+            contentType: document.contentMd5,
+          });
+
+          return {
+            id: document.id,
+            clientId: documentDto.clientId,
+            uploadUrl,
+            status: DocumentStatus.Pending,
+          };
+      }
+    } catch (error) {
+      console.log(error);
+      return {
+        clientId: documentDto.clientId,
+        errors: ['Failed to create presigned url for this document'],
+        status: DocumentStatus.Failed,
+      };
+    }
+  }
+
+  async intendBulkUpload(
+    documents: DocumentUploadIntentDto[],
+    userId: string,
+  ): Promise<IntentBulkUploadResponse[]> {
+    const requests = documents.map(async (documentDto) =>
+      this.initUploadIntent(documentDto, userId),
+    );
+
+    return Promise.all(requests);
+  }
+
+  async commitUpload({
+    userId,
+    documentId,
+  }: CommitUploadProps): Promise<DocumentCommitResponse> {
+    const document = await this.documentRepo.findOneBy({
+      id: documentId,
+      user: { id: userId },
+    });
+
+    if (!document) {
+      return {
+        id: documentId,
+        status: DocumentStatus.Failed,
+        errors: ['Document does not exist'],
+      };
+    }
+
+    if (document.status === DocumentStatus.Completed) {
+      return {
+        id: documentId,
+        status: DocumentStatus.Completed,
+      };
+    }
+
+    try {
+      const object = await this.storageService.headObject(document.storageKey);
+      const errors = this.storageService.validateUploadedObject(
+        object,
+        document,
+      );
+
+      if (errors.length) {
+        return {
+          id: document.id,
+          status: DocumentStatus.Failed,
+          errors,
+        };
+      }
+
+      await this.documentRepo.update(
+        {
+          id: document.id,
+          user: { id: userId },
+          status: DocumentStatus.Pending,
+        },
+        { status: DocumentStatus.Completed },
+      );
+
+      return {
+        id: document.id,
+        status: DocumentStatus.Completed,
+      };
+    } catch {
+      return {
+        id: document.id,
+        status: DocumentStatus.Failed,
+        errors: ['Failed to verify document'],
+      };
+    }
+  }
+
+  async bulkUploadCommit(
+    documents: CommitBulkUploadDto,
+    userId: string,
+  ): Promise<DocumentCommitResponse[]> {
+    return Promise.all(
+      documents.documentIds.map((documentId) =>
+        this.commitUpload({ documentId, userId }),
+      ),
+    );
   }
 }

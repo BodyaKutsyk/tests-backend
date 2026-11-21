@@ -8,11 +8,19 @@ import {
   ManyToMany,
   ManyToOne,
   type Relation,
+  Unique,
 } from 'typeorm';
 import { User } from './user.js';
 import { Test } from './test.js';
 import { GenerationJob } from './generation-job.js';
 
+export enum DocumentStatus {
+  Pending = 'pending',
+  Completed = 'completed',
+  Failed = 'failed',
+}
+
+@Unique('UQ_documents_user_content_md5', ['user', 'contentMd5'])
 @Index(['createdAt', 'mimeType'])
 @Entity('documents')
 export class Document extends BaseWithDeleted {
@@ -34,6 +42,19 @@ export class Document extends BaseWithDeleted {
     },
   })
   size: number;
+
+  @Column({
+    type: 'enum',
+    enum: DocumentStatus,
+    default: DocumentStatus.Pending,
+  })
+  status: DocumentStatus;
+
+  @Column({
+    type: 'varchar',
+    length: 32,
+  })
+  contentMd5: string;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })

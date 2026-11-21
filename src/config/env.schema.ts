@@ -26,6 +26,11 @@ export const envSchema = z.object({
   OLLAMA_PORT: portType,
   OLLAMA_MODEL: z.string(),
   OLLAMA_HOST: z.string(),
+  AWS_REGION: z.string(),
+  STORAGE_ENDPOINT: z.string().optional(),
+  STORAGE_ACCESS_KEY: z.string(),
+  STORAGE_SECRET_KEY: z.string(),
+  STORAGE_BUCKET: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

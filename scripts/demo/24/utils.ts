@@ -1,6 +1,10 @@
 import { Helper, type HttpResult } from '../../utils/helper.js';
 import { randomUUID } from 'crypto';
 import { Role, User } from '../../../src/entities/user.js';
+import {
+  DocumentCommitResponse,
+  IntentBulkUploadResponse,
+} from '../../../src/documents/types/response.js';
 
 interface AuthResponse {
   accessToken: string;
@@ -8,8 +12,37 @@ interface AuthResponse {
   expiresIn: number;
 }
 
+interface PutResult {
+  status: number;
+  etag: string | null;
+}
+
 interface GetUsersProps {
   accessToken: string;
+}
+
+interface MultipartPart {
+  partNumber: number;
+  uploadUrl: string;
+}
+
+interface UploadedPart {
+  PartNumber: number;
+  ETag: string;
+}
+
+type UploadBody = Blob | Buffer | Uint8Array<ArrayBuffer>;
+
+interface IntentDocumentUpload {
+  contentMd5: string;
+  clientId: string;
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+interface IntentDocumentsUploadPayload {
+  documents: IntentDocumentUpload[];
 }
 
 interface UploadFilesResponse {
@@ -62,6 +95,15 @@ export class Helper24 extends Helper {
       .set({ role: Role.Admin })
       .where('id = :id', { id: userId })
       .execute();
+  }
+
+  async intentUploads(
+    documents: IntentDocumentsUploadPayload,
+    accessToken: string,
+  ) {
+    return this.post<IntentBulkUploadResponse[]>('/files/intent', documents, {
+      Authorization: `Bearer ${accessToken}`,
+    });
   }
 
   async postFiles(
@@ -127,5 +169,62 @@ export class Helper24 extends Helper {
 
   encodeJwtPayload(payload: Record<string, unknown>): string {
     return Buffer.from(JSON.stringify(payload)).toString('base64url');
+  }
+
+  async putToS3(
+    url: string,
+    body: UploadBody,
+    headers: Record<string, string> = {},
+  ): Promise<PutResult> {
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `S3 upload failed: ${response.status} ${await response.text()}`,
+      );
+    }
+
+    return {
+      status: response.status,
+      etag: response.headers.get('etag'),
+    };
+  }
+
+  async bulkCommit(documentIds: string[], accessToken: string) {
+    return this.post<DocumentCommitResponse[]>(
+      '/files/commit',
+      { documentIds },
+      { Authorization: `Bearer ${accessToken}` },
+    );
+  }
+
+  async uploadMultipart(
+    file: Blob,
+    parts: MultipartPart[],
+    partSize: number,
+  ): Promise<UploadedPart[]> {
+    const uploaded = await Promise.all(
+      parts.map(async (part) => {
+        const start = (part.partNumber - 1) * partSize;
+        const chunk = file.slice(start, start + partSize);
+
+        const result = await this.putToS3(part.uploadUrl, chunk);
+
+        if (!result.etag) {
+          throw new Error(`Missing ETag for part ${part.partNumber}`);
+        }
+
+        return {
+          PartNumber: part.partNumber,
+          ETag: result.etag,
+        };
+      }),
+    );
+
+    return uploaded.sort((a, b) => a.PartNumber - b.PartNumber);
   }
 }

@@ -12,6 +12,7 @@ import { DocumentsConsumer } from './documents.consumer.js';
 import { DocumentParserService } from './parsing/document-parser.service.js';
 import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module.js';
 import { DoclingModule } from '../docling/docling.module.js';
+import { StorageModule } from '../storage/storage.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DoclingModule } from '../docling/docling.module.js';
     OutboxModule,
     RabbitMqModule,
     DoclingModule,
+    StorageModule,
   ],
   controllers: [DocumentsController],
   providers: [
