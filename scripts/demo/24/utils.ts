@@ -5,6 +5,7 @@ import {
   DocumentCommitResponse,
   IntentBulkUploadResponse,
 } from '../../../src/documents/types/response.js';
+import { DocumentUploadType } from '../../../src/entities/document.js';
 
 interface AuthResponse {
   accessToken: string;
@@ -45,8 +46,21 @@ interface IntentDocumentsUploadPayload {
   documents: IntentDocumentUpload[];
 }
 
+interface UploadFileSingleResponse {
+  id: string;
+  fileName: string;
+  status: string;
+  type: DocumentUploadType;
+  clientId: string;
+}
+
+export interface UploadFileMultipartResponse extends UploadFileSingleResponse {
+  parts: MultipartPart[];
+  partSize: number;
+}
+
 interface UploadFilesResponse {
-  items: { id: string; fileName: string; status: string }[];
+  items: (UploadFileMultipartResponse | UploadFileSingleResponse)[];
 }
 
 interface UploadFile {
@@ -204,27 +218,23 @@ export class Helper24 extends Helper {
 
   async uploadMultipart(
     file: Blob,
-    parts: MultipartPart[],
-    partSize: number,
-  ): Promise<UploadedPart[]> {
-    const uploaded = await Promise.all(
-      parts.map(async (part) => {
-        const start = (part.partNumber - 1) * partSize;
-        const chunk = file.slice(start, start + partSize);
+    intent: UploadFileMultipartResponse,
+    start = 0,
+    end = intent.parts.length,
+  ): Promise<void> {
+    const results = await Promise.allSettled(
+      intent.parts.slice(start, end).map(async ({ partNumber, uploadUrl }) => {
+        const start = (partNumber - 1) * intent.partSize;
+        const end = Math.min(start + intent.partSize, file.size);
 
-        const result = await this.putToS3(part.uploadUrl, chunk);
-
-        if (!result.etag) {
-          throw new Error(`Missing ETag for part ${part.partNumber}`);
-        }
-
-        return {
-          PartNumber: part.partNumber,
-          ETag: result.etag,
-        };
+        await this.putToS3(uploadUrl, file.slice(start, end));
       }),
     );
 
-    return uploaded.sort((a, b) => a.PartNumber - b.PartNumber);
+    const failed = results.filter((result) => result.status === 'rejected');
+
+    if (failed.length) {
+      throw new Error(`${failed.length} multipart uploads failed`);
+    }
   }
 }

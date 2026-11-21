@@ -20,6 +20,11 @@ export enum DocumentStatus {
   Failed = 'failed',
 }
 
+export enum DocumentUploadType {
+  Single = 'single',
+  Multipart = 'multipart',
+}
+
 @Unique('UQ_documents_user_content_md5', ['user', 'contentMd5'])
 @Index(['createdAt', 'mimeType'])
 @Entity('documents')
@@ -55,6 +60,19 @@ export class Document extends BaseWithDeleted {
     length: 32,
   })
   contentMd5: string;
+
+  @Column({
+    type: 'enum',
+    enum: DocumentUploadType,
+    default: DocumentUploadType.Single,
+  })
+  uploadType: DocumentUploadType;
+
+  @Column({ type: 'text', nullable: true })
+  uploadId: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  partSize: number | null;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'user_id' })

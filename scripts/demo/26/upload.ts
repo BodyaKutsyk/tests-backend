@@ -2,7 +2,10 @@ import { Helper24 } from '../24/utils.js';
 import { randomUUID } from 'crypto';
 import { readFile } from 'node:fs/promises';
 import createMd5FromFile from '../../../src/utils/create-md5-from-file.js';
-import { DocumentStatus } from '../../../src/entities/document.js';
+import {
+  DocumentStatus,
+  DocumentUploadType,
+} from '../../../src/entities/document.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { DEMO_MD5 } from '../../../src/storage/storage.service.js';
@@ -69,7 +72,10 @@ async function main() {
 
     let keyFromServer = 0;
 
-    if (results.data[0].status === DocumentStatus.Pending) {
+    if (
+      results.data[0].status === DocumentStatus.Pending &&
+      results.data[0].type === DocumentUploadType.Single
+    ) {
       const includesFileName = results.data[0].uploadUrl.includes(fileName);
 
       if (!includesFileName) {

@@ -1,4 +1,14 @@
-import { DocumentStatus } from '../../entities/document.js';
+import { DocumentStatus, DocumentUploadType } from '../../entities/document.js';
+
+interface BaseUploadResponse {
+  clientId: string;
+  id: string;
+}
+
+interface MultipartItem {
+  partNumber: number;
+  uploadUrl: string;
+}
 
 export interface DocumentUploadFailedResponse {
   status: DocumentStatus.Failed;
@@ -6,21 +16,26 @@ export interface DocumentUploadFailedResponse {
   errors: string[];
 }
 
-export interface DocumentUploadExistsResponse {
+export interface DocumentUploadExistsResponse extends BaseUploadResponse {
   status: DocumentStatus.Completed;
-  clientId: string;
-  id: string;
 }
 
-export interface DocumentUploadSuccessResponse {
+export interface SingleUploadResponse extends BaseUploadResponse {
   status: DocumentStatus.Pending;
-  clientId: string;
-  id: string;
   uploadUrl: string;
+  type: DocumentUploadType.Single;
+}
+
+export interface MultipartUploadResponse extends BaseUploadResponse {
+  status: DocumentStatus.Pending;
+  type: DocumentUploadType.Multipart;
+  partSize: number;
+  parts: MultipartItem[];
 }
 
 export type IntentBulkUploadResponse =
-  | DocumentUploadSuccessResponse
+  | SingleUploadResponse
+  | MultipartUploadResponse
   | DocumentUploadExistsResponse
   | DocumentUploadFailedResponse;
 
