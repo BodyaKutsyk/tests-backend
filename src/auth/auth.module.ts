@@ -5,11 +5,11 @@ import { AuthController } from './auth.controller.js';
 import { JwtAuth } from './jwt/jwt-auth.provider.js';
 import { CredentialsService } from './credentials/credentials.service.js';
 import { UsersModule } from '../users/users.module.js';
-import { RedisAuthStore } from './redis-auth-store.js';
+import { PostgresAuthStore } from './postgres-auth-store.js';
 
 @Module({
   imports: [RedisQueueModule, UsersModule],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuth, CredentialsService, RedisAuthStore],
+  providers: [AuthService, JwtAuth, CredentialsService, PostgresAuthStore],
 })
 export class AuthModule {}

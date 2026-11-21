@@ -121,7 +121,7 @@ export class UsersService {
   ): Promise<Promise<{ user: User; passwordHash: string }> | null> {
     const user = await this.usersRepo.findOne({
       where: { email },
-      select: { passwordHash: true },
+      select: { id: true, passwordHash: true },
     });
 
     if (!user) {
@@ -136,6 +136,6 @@ export class UsersService {
   }
 
   async updatePasswordHash(id: string, passwordHash: string) {
-    await this.usersRepo.update({ passwordHash }, { id });
+    await this.usersRepo.update({ id }, { passwordHash });
   }
 }

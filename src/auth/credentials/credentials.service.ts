@@ -39,7 +39,7 @@ export class CredentialsService {
     if (this.passwordHasher.needsRehash(found.passwordHash)) {
       await this.usersService.updatePasswordHash(
         found.user.id,
-        found.passwordHash,
+        await this.passwordHasher.hash(password),
       );
     }
 

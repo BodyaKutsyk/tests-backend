@@ -43,12 +43,29 @@ export class Helper24 extends Helper {
     return this.post<AuthResponse>('/auth/sign-up', data);
   }
 
+  async signUpAndLogin(): Promise<HttpResult<AuthResponse>> {
+    const data = {
+      email: `user-${randomUUID()}@example.com`,
+      password: 'Test1234!',
+    };
+    const created = await this.post<AuthResponse>('/auth/sign-up', data);
+    if (!created.ok) throw new Error(`Sign-up failed (${created.status})`);
+    return this.post<AuthResponse>('/auth/sign-in', data);
+  }
+
   async refresh(refreshToken: string): Promise<HttpResult<AuthResponse>> {
     return this.post<AuthResponse>('/auth/refresh', { refreshToken });
   }
 
-  async logout(refreshToken: string): Promise<HttpResult<never>> {
-    return this.post<never>('/auth/sign-out', { refreshToken });
+  async logout(
+    refreshToken: string,
+    accessToken: string,
+  ): Promise<HttpResult<never>> {
+    return this.post<never>(
+      '/auth/sign-out',
+      { refreshToken },
+      { Authorization: `Bearer ${accessToken}` },
+    );
   }
 
   async getUsers({ accessToken }: GetUsersProps) {

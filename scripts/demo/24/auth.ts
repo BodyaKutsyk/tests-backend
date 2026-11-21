@@ -5,7 +5,7 @@ async function main() {
 
   try {
     await helper.dataSource.initialize();
-    const signUpResult = await helper.signUp();
+    const signUpResult = await helper.signUpAndLogin();
     const signUpStatus = signUpResult.status;
 
     if (!signUpResult.ok || !('data' in signUpResult)) {
@@ -27,7 +27,10 @@ async function main() {
     }
 
     const rotatedRefreshToken = refreshResult.data.refreshToken;
-    const { status: logoutStatus } = await helper.logout(rotatedRefreshToken);
+    const { status: logoutStatus } = await helper.logout(
+      rotatedRefreshToken,
+      accessToken,
+    );
     const { status: afterLogOutStatus } = await helper.getTests({
       accessToken,
     });
@@ -37,11 +40,7 @@ async function main() {
       accessToken,
     });
 
-    console.log(
-      'PS: sign up also gives access and refresh token like sign-in endpoint but return 201 Created because it basically creates user',
-    );
-
-    console.log(`sign-up=${signUpStatus}`);
+    console.log(`login=${signUpStatus}`);
     console.log(`no-token=${withoutTokenStatus}`);
     console.log(`with-token=${withTokenStatus}`);
     console.log(`refresh=${refreshStatus}`);
@@ -51,7 +50,7 @@ async function main() {
     console.log(`access-after-refresh-attempt=${afterRefreshLogOutStatus}`);
 
     const checks = {
-      signUp: signUpStatus === 201,
+      signUp: signUpStatus === 200,
       noToken: withoutTokenStatus === 401,
       withToken: withTokenStatus === 200,
       refresh: refreshStatus === 200,

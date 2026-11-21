@@ -58,7 +58,8 @@ async function main() {
 
     jwtPayload.sub = '5935545f-d8d8-4800-a0a8-89386333399d';
 
-    const newAccessToken = helper.encodeJwtPayload(jwtPayload);
+    const [header, , signature] = r1AccessToken.split('.');
+    const newAccessToken = `${header}.${helper.encodeJwtPayload(jwtPayload)}.${signature}`;
     const { status: tamperedStatus } = await helper.getUsers({
       accessToken: newAccessToken,
     });

@@ -580,17 +580,31 @@ RabbitMQ provides at-least-once delivery: if an ack is lost, a message may be de
 
 ## Authentication and Authorization
 
-The API uses `@nestjs/authentication` for bearer-token authentication. `AuthenticationGuard` is registered globally in `AppModule`. `JwtAuth`, registered in `AuthenticationRegistry`, verifies the access JWT, checks its `sid` against the Redis session-family record, and loads the current user. Authenticated requests expose that user through `request.user` and `@CurrentUser()`.
+| Variable | Source | Purpose |
+| --- | --- | --- |
+| `JWT_PRIVATE_KEY` | Secret store | ES256 P-256 signing key, PEM or base64-encoded PEM |
+| `JWT_PUBLIC_KEY` | Secret store  | Matching public key used to validate the configured key pair |
+| `REFRESH_TOKEN_PEPPER` | Environment | HMAC key for refresh-token identifiers |
+
+The API requires a matching ES256 key pair and sets a five-minute access-token lifetime. Generate separate keys for development and production and store them in the corresponding secret-store environments. The current implementation uses one key and does not yet support `kid`-based overlap during key rotation; replace keys only with a coordinated rollout that accounts for existing access tokens.
+
+| Environment | Public key SHA-256 fingerprint (DER SPKI) |
+| --- | --- |
+| Current Infisical environment | `5d0e3c77b0ed787845ba44d9cc25d38319eed0139b6e0ed79a33f223b6defbf1` |
+
+Sign-out revokes the refresh-token family; access-token authentication checks the associated PostgreSQL session family on each request.
+
+The API uses `@nestjs/authentication` for bearer-token authentication. `AuthenticationGuard` is registered globally in `AppModule`. `JwtAuth`, registered in `AuthenticationRegistry`, verifies the access JWT, checks its `sid` against the PostgreSQL session-family record, and loads the current user. Authenticated requests expose that user through `request.user` and `@CurrentUser()`.
 
 ### Sign-up, sign-in, refresh, and sign-out
 
-`POST /auth/sign-up` and `POST /auth/sign-in` return a short-lived access JWT and an opaque refresh token. Refresh tokens are stored in Redis by their SHA-256 ID. Each sign-in starts a token family; refresh rotates the single-use refresh token while keeping the new token in the same family. The family record tracks the user, `sid`, role snapshot, revocation state, idle activity, and absolute expiration.
+`POST /auth/sign-up` and `POST /auth/sign-in` return a short-lived access JWT and an opaque refresh token. PostgreSQL stores an HMAC of the library's token identifier. Each sign-in starts a token family; refresh rotates the single-use token while keeping the new token in the same family. The family record tracks the user, `sid`, revocation time and absolute expiration.
 
-Redis Lua scripts perform the state changes atomically. `markRefreshTokenUsed` is a compare-and-set operation. Reusing a spent refresh token revokes its whole family. Access-token validation checks the family through the `sid` index, so revocation also prevents later requests made with access tokens from that family. `POST /auth/sign-out` revokes the family associated with the supplied refresh token and returns `204 No Content`.
+Refresh rotation runs the library's store calls in one PostgreSQL transaction. A family row lock serializes concurrent refresh and sign-out operations, and reusing a spent refresh token commits family revocation before returning an error. `POST /auth/sign-out` requires both a refresh token and its family's bearer access token. It verifies the access signature and claims, then atomically revokes the family and adds the access token's `jti` to a PostgreSQL denylist until its `exp`. Expired denylist records are removed periodically. Authentication checks both the denylist and family state; the latter also invalidates other access tokens from that family.
 
 ### Role and document access
 
-Users have one `Role` value (`customer` or `admin`). `@Roles(Role.Admin)` marks routes that require the admin role, and the global `RolesGuard` checks the authenticated user's current role. For example, `GET /users` is admin-only. Document upload accepts `.pdf`, `.txt`, and `.md` files as multipart data under the `files` field. `GET /files/:id` compares the document owner with the authenticated user and is intended to return `403` for another user's document. The current service lookup does not explicitly load the `user` relation, so this check should load that relation or compare the foreign key directly before relying on that behavior.
+Users have one `Role` value (`customer` or `admin`). `@Roles(Role.Admin)` marks routes that require the admin role, and the global `RolesGuard` checks the authenticated user's current role. For example, `GET /users` is admin-only. The authenticated user is reloaded on each request, so a role change takes effect on the next request. `GET /files/:id` loads the document owner and returns `403` for another user's document.
 
 ### Running the demos
 
@@ -608,5 +622,5 @@ pnpm demo:reuse
 pnpm demo:rbac
 ```
 
-The auth demo checks sign-up, access-token requirements, refresh, and sign-out. The RBAC demo checks anonymous access, document ownership, the admin-only users route, and rejection of a malformed token. The reuse demo is intended to check refresh-token replay and family revocation; its current implementation passes access tokens to `/auth/refresh` for the `r1-reuse` and `r2-after-reuse` requests, so those checks do not yet demonstrate refresh-token replay or family revocation. To verify replay behavior, the repeated request must submit the already-used `r1RefreshToken` to `/auth/refresh`, then check that both access tokens are rejected.
+The auth demo checks sign-in, access-token requirements, refresh, and sign-out. The RBAC demo checks anonymous access, document ownership, the admin-only users route, and rejection of a token with a modified payload and unchanged signature. The reuse demo submits an already-used refresh token and then checks that its successor is rejected.
 

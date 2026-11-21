@@ -5,32 +5,31 @@ async function main() {
 
   try {
     await helper.dataSource.initialize();
-    const signUpResult = await helper.signUp();
+    const signUpResult = await helper.signUpAndLogin();
     const signUpStatus = signUpResult.status;
 
     if (!signUpResult.ok || !('data' in signUpResult)) {
       throw new Error(`Sign-up failed (${signUpStatus})`);
     }
 
-    const { accessToken: r1AccessToken, refreshToken: r1RefreshToken } =
-      signUpResult.data;
+    const { refreshToken: r1RefreshToken } = signUpResult.data;
     const refreshResponse = await helper.refresh(r1RefreshToken);
 
     if (!refreshResponse.ok || !('data' in refreshResponse)) {
       throw new Error('failed to refresh');
     }
 
-    const { accessToken: r2AccessToken } = refreshResponse.data;
-    const { status: r1ReuseStatus } = await helper.refresh(r1AccessToken);
-    const { status: r2ReuseStatus } = await helper.refresh(r2AccessToken);
+    const { refreshToken: r2RefreshToken } = refreshResponse.data;
+    const { status: r1ReuseStatus } = await helper.refresh(r1RefreshToken);
+    const { status: r2ReuseStatus } = await helper.refresh(r2RefreshToken);
 
-    console.log(`sign-up=${signUpStatus}`);
+    console.log(`login=${signUpStatus}`);
     console.log(`r1-refresh=${refreshResponse.status}`);
     console.log(`r1-reuse=${r1ReuseStatus}`);
     console.log(`r2-after-reuse=${r2ReuseStatus}`);
 
     const checks = {
-      signUp: signUpStatus === 201,
+      signUp: signUpStatus === 200,
       r1Refresh: refreshResponse.status === 200,
       r1Reuse: r1ReuseStatus === 401,
       r2Reuse: r2ReuseStatus === 401,

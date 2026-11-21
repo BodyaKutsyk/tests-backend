@@ -34,6 +34,7 @@ import {
   AuthenticationModule,
 } from '@nestjs/authentication';
 import { RolesGuard } from './guards/roles.guard.js';
+import { getSigningKey } from './auth/jwt/signing-key.js';
 
 @Module({
   imports: [
@@ -96,17 +97,14 @@ import { RolesGuard } from './guards/roles.guard.js';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<Env, true>) => ({
         accessToken: {
-          key: configService.get('JWT_PRIVATE_KEY'),
+          key: getSigningKey(
+            configService.get('JWT_PRIVATE_KEY'),
+            configService.get('JWT_PUBLIC_KEY'),
+          ),
           issuer: 'test-generator',
           audience: 'test-generator-api',
-          signOptions: {
-            algorithm: 'RS256',
-            expiresIn: '5m',
-          },
-          verifyOptions: {
-            secretOrPublicKey: configService.get('JWT_PUBLIC_KEY'),
-            algorithms: ['RS256'],
-          },
+          alg: 'ES256',
+          ttl: '5m',
         },
       }),
     }),

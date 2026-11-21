@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { SignInRequestDto, SignUpRequestDto } from './types/request.dto.js';
 import { Public } from '@nestjs/authentication';
@@ -44,7 +51,12 @@ export class AuthController {
 
   @HttpCode(204)
   @Post('sign-out')
-  async signOut(@Body('refreshToken') refreshToken: string) {
-    return this.authService.signOut(refreshToken);
+  async signOut(
+    @Body('refreshToken') refreshToken: string,
+    @Headers('authorization') authorization?: string,
+  ) {
+    if (!authorization?.startsWith('Bearer '))
+      throw new UnauthorizedException();
+    return this.authService.signOut(refreshToken, authorization.slice(7));
   }
 }
