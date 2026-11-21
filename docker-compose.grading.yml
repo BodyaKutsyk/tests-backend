@@ -10,6 +10,8 @@ x-grading-api-env: &grading-api-env
   REDIS_CACHE_PORT: ${REDIS_CACHE_PORT}
   REDIS_QUEUE_PORT: ${REDIS_QUEUE_PORT}
   REDIS_PASSWORD: ${REDIS_PASSWORD}
+  DOCLING_HOST: docling
+  OLLAMA_HOST: ollama
 
 services:
   api:

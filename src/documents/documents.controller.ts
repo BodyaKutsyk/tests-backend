@@ -7,7 +7,6 @@ import {
   UseInterceptors,
   UploadedFiles,
   ParseFilePipeBuilder,
-  Headers,
   Body,
   HttpCode,
   HttpStatus,
@@ -18,11 +17,18 @@ import { DocumentsService } from './documents.service.js';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../pipes/file-validation.pipe.js';
 import {
+  CommitBulkUploadDto,
+  CreateBulkPresignedUploadDto,
   DeleteFilesPayloadDto,
   UploadFilesResponseDto,
 } from './types/document.dto.js';
 import { type AuthenticatedRequest } from '../types/request.js';
 import { NotFoundProblem } from '../exceptions/problem-errors.js';
+import { validateDocuments } from './utils/validate-documents.js';
+import {
+  DocumentCommitResponse,
+  IntentBulkUploadResponse,
+} from './types/response.js';
 
 @Controller('files')
 export class DocumentsController {
@@ -56,9 +62,12 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+  async getInfoById(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
     const user = request.user;
-    const document = await this.documentsService.findOne(id);
+    const document = await this.documentsService.getInfoById(id);
 
     if (!document) {
       throw new NotFoundProblem({ detail: 'Document doesnt exist' });
@@ -75,5 +84,29 @@ export class DocumentsController {
   @Delete()
   remove(@Body() { documentIds }: DeleteFilesPayloadDto) {
     return this.documentsService.remove(documentIds);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('intent')
+  async intendUpload(
+    @Body() dto: CreateBulkPresignedUploadDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<IntentBulkUploadResponse[]> {
+    const { valid, failed } = await validateDocuments(dto.documents);
+
+    const successful = valid.length
+      ? await this.documentsService.intendBulkUpload(valid, request.user.id)
+      : [];
+
+    return [...successful, ...failed];
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('commit')
+  async commitBulkUpload(
+    @Body() dto: CommitBulkUploadDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<DocumentCommitResponse[]> {
+    return this.documentsService.bulkUploadCommit(dto, request.user.id);
   }
 }

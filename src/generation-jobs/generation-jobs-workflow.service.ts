@@ -4,154 +4,226 @@ import {
   GenerationJob,
   GenerationJobStatus,
 } from '../entities/generation-job.js';
-import { Repository } from 'typeorm';
-import { clearInterval } from 'node:timers';
-import { GenerationJobsEventService } from './generation-jobs-event.service.js';
-import { TestsParserWorkerService } from './workers/tests-parser-worker.service.js';
-import { TestsGeneratorWorkerService } from './workers/tests-generator-worker.service.js';
+import { EntityManager, Repository } from 'typeorm';
+import {
+  GeneratedQuestion,
+  TestsGeneratorWorkerService,
+} from './workers/tests-generator-worker.service.js';
 import { RedisCacheService } from '../redis/cache/cache.service.js';
 import { getRedisUserTestsCacheKey } from '../contracts/generation/constants.js';
+import { Test } from '../entities/test.js';
+import { Question } from '../entities/question.js';
+import { AnswerOption } from '../entities/answer-option.js';
+import { Document } from '../entities/document.js';
+import { InboxService } from '../inbox/inbox.service.js';
+import { DocumentNotReadyError } from './document-not-ready.error.js';
 
 @Injectable()
 export class GenerationJobsWorkflowService implements OnModuleDestroy {
   private readonly logger = new Logger(GenerationJobsWorkflowService.name);
-  private readonly intervals = new Map<string, ReturnType<typeof setInterval>>();
-  private readonly processing = new Set<string>();
-  private readonly inFlight = new Set<Promise<void>>();
-  private readonly completion = new Map<
-    string,
-    {
-      resolve: () => void;
-      reject: (error: Error) => void;
-      promise: Promise<void>;
-    }
-  >();
   private stopping = false;
 
   constructor(
     @InjectRepository(GenerationJob)
     private readonly generationJobRepo: Repository<GenerationJob>,
-    private readonly eventsService: GenerationJobsEventService,
-    private readonly parserWorker: TestsParserWorkerService,
     private readonly generatorWorker: TestsGeneratorWorkerService,
     private readonly redisCacheService: RedisCacheService,
+    private readonly inboxService: InboxService,
   ) {}
 
-  async process(jobId: string): Promise<void> {
+  async process(
+    jobId: string,
+    inboxEntry: { messageId: string; consumer: string },
+  ): Promise<void> {
     if (this.stopping) throw new Error('Generation workflow is stopping');
 
-    const existing = this.completion.get(jobId);
-    if (existing) return existing.promise;
+    const runner =
+      this.generationJobRepo.manager.connection.createQueryRunner();
+    await runner.connect();
+    let locked = false;
+    try {
+      const rows = await runner.query(
+        'SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS locked',
+        [jobId],
+      );
+      locked = rows[0].locked;
+      if (!locked) return;
 
-    let resolve!: () => void;
-    let reject!: (error: Error) => void;
-    const promise = new Promise<void>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    this.completion.set(jobId, { resolve, reject, promise });
+      const job = await this.generationJobRepo.findOne({
+        where: { id: jobId },
+        relations: { user: true, documents: true },
+      });
+      if (!job) throw new Error(`Generation job ${jobId} was not found`);
+      if (
+        job.status === GenerationJobStatus.Queued ||
+        job.status === GenerationJobStatus.Failed
+      ) {
+        if (!(await this.claimJob(jobId, job.status))) return;
+      } else if (job.status !== GenerationJobStatus.Generated) {
+        return;
+      }
 
-    const intervalId = setInterval(() => {
-      if (this.stopping || this.processing.has(jobId)) return;
-      this.processing.add(jobId);
-
-      const task = this.tick(jobId)
-        .then((finished) => {
-          if (!finished) return;
-          this.stop(jobId);
-          this.completion.get(jobId)?.resolve();
-          this.completion.delete(jobId);
-        })
-        .catch((error: unknown) => {
-          this.logger.error(error);
-          this.stop(jobId);
-          const completion = this.completion.get(jobId);
-          this.completion.delete(jobId);
-          completion?.reject(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        })
-        .finally(() => {
-          this.processing.delete(jobId);
-          this.inFlight.delete(task);
-        });
-
-      this.inFlight.add(task);
-    }, 6000);
-
-    this.intervals.set(jobId, intervalId);
-    return promise;
-  }
-
-  private async tick(jobId: string): Promise<boolean> {
-    let job = await this.generationJobRepo.findOneOrFail({
-      where: {
-        id: jobId
-      },
-      relations: {
-        user: true,
-      },
-    });
-    this.eventsService.publish({
-      id: jobId,
-      status: job.status,
-      type: job.status,
-    });
-
-    if (this.stopping || this.isFinished(job.status)) {
-      this.stop(jobId);
-      return true;
-    }
-
-    switch (job.status) {
-      case GenerationJobStatus.Queued:
-        job = await this.parserWorker.parse(job.id);
-        break;
-      case GenerationJobStatus.Parsing:
-        job = await this.generatorWorker.generate(jobId);
-        break;
-      case GenerationJobStatus.Generating:
-        job.status = GenerationJobStatus.Done;
-        await this.redisCacheService.del(
-          getRedisUserTestsCacheKey(job.user.id),
+      try {
+        const questions = await this.generatorWorker.generate(
+          {
+            jobId,
+            questionCount: job.questionCount,
+            questionType: job.questionType,
+          },
+          job.generationCheckpoint ?? {
+            questions: [],
+            attempts: 0,
+            emptyBatches: 0,
+          },
+          async (generationCheckpoint) => {
+            await this.generationJobRepo.update(jobId, {
+              generationCheckpoint,
+              processed: generationCheckpoint.questions.length,
+            });
+          },
         );
+        if (!questions.length)
+          throw new Error(`No valid questions generated for job ${jobId}`);
+        await this.saveResult(job, questions, inboxEntry);
+      } catch (error) {
+        if (error instanceof DocumentNotReadyError) {
+          await this.generationJobRepo.update(jobId, {
+            status: GenerationJobStatus.Queued,
+          });
+          throw error;
+        }
+        await this.generationJobRepo.update(jobId, {
+          status: GenerationJobStatus.Failed,
+        });
+        this.logger.error(`Generation workflow failed for job ${jobId}`, error);
+        throw error;
+      }
+      await this.invalidateCache(job.user.id, jobId);
+    } finally {
+      if (locked)
+        await runner.query(
+          'SELECT pg_advisory_unlock(hashtextextended($1, 0))',
+          [jobId],
+        );
+      await runner.release();
     }
-
-    await this.generationJobRepo.save(job);
-    this.eventsService.publish({
-      id: jobId,
-      status: job.status,
-      type: job.status,
-    });
-
-    if (this.isFinished(job.status)) this.stop(jobId);
-    return this.isFinished(job.status);
   }
 
-  private isFinished(status: GenerationJobStatus): boolean {
-    return (
-      status === GenerationJobStatus.Done ||
-      status === GenerationJobStatus.Failed
+  async failWaitingJob(jobId: string): Promise<void> {
+    await this.generationJobRepo
+      .createQueryBuilder()
+      .update(GenerationJob)
+      .set({ status: GenerationJobStatus.Failed })
+      .where('id = :id AND status = :status', {
+        id: jobId,
+        status: GenerationJobStatus.Queued,
+      })
+      .execute();
+  }
+
+  private async claimJob(
+    jobId: string,
+    status: GenerationJobStatus,
+  ): Promise<boolean> {
+    const result = await this.generationJobRepo
+      .createQueryBuilder()
+      .update(GenerationJob)
+      .set({ status: GenerationJobStatus.Generated })
+      .where('id = :id AND status = :status', {
+        id: jobId,
+        status,
+      })
+      .returning('id')
+      .execute();
+    return result.raw.length > 0;
+  }
+
+  private async saveResult(
+    job: GenerationJob,
+    questions: GeneratedQuestion[],
+    inboxEntry: { messageId: string; consumer: string },
+  ) {
+    await this.generationJobRepo.manager.transaction(async (manager) => {
+      const test = await manager.save(
+        Test,
+        manager.create(Test, {
+          name: (job.documents[0]?.name ?? 'Generated test').slice(0, 255),
+          user: job.user,
+        }),
+      );
+
+      for (const document of job.documents) {
+        await manager
+          .createQueryBuilder()
+          .relation(Document, 'tests')
+          .of(document.id)
+          .add(test.id);
+      }
+      for (const question of questions) {
+        await this.saveQuestion(manager, test, question);
+      }
+
+      const result = await manager
+        .createQueryBuilder()
+        .update(GenerationJob)
+        .set({
+          status: GenerationJobStatus.Done,
+          test,
+          processed: questions.length,
+          generationCheckpoint: null,
+        })
+        .where('id = :id AND status = :status', {
+          id: job.id,
+          status: GenerationJobStatus.Generated,
+        })
+        .returning('id')
+        .execute();
+      if (!result.raw.length) {
+        throw new Error(`Could not mark job ${job.id} as done`);
+      }
+      await this.inboxService.save(inboxEntry, manager);
+    });
+  }
+
+  private async saveQuestion(
+    manager: EntityManager,
+    test: Test,
+    generated: GeneratedQuestion,
+  ) {
+    const question = await manager.save(
+      Question,
+      manager.create(Question, {
+        test,
+        value: generated.text,
+        question_type: generated.type,
+      }),
+    );
+    if (!generated.options.length) return;
+
+    await manager.save(
+      AnswerOption,
+      generated.options.map((option) =>
+        manager.create(AnswerOption, {
+          question,
+          value: option.text,
+          isCorrect: option.isCorrect,
+        }),
+      ),
     );
   }
 
-  private stop(jobId: string): void {
-    const intervalId = this.intervals.get(jobId);
-    if (!intervalId) return;
-    clearInterval(intervalId);
-    this.intervals.delete(jobId);
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    this.stopping = true;
-    for (const jobId of this.intervals.keys()) this.stop(jobId);
-    await Promise.allSettled([...this.inFlight]);
-
-    for (const completion of this.completion.values()) {
-      completion.reject(
-        new Error('Generation workflow stopped before completion'),
+  private async invalidateCache(userId: string, jobId: string) {
+    try {
+      await this.redisCacheService.del(getRedisUserTestsCacheKey(userId));
+    } catch (error) {
+      this.logger.warn(
+        `Could not invalidate test cache for job ${jobId}`,
+        error,
       );
     }
-    this.completion.clear();
+  }
+
+  onModuleDestroy(): void {
+    this.stopping = true;
   }
 }

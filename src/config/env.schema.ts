@@ -20,6 +20,17 @@ export const envSchema = z.object({
   REDIS_PASSWORD: z.string(),
   JWT_PUBLIC_KEY: z.string(),
   JWT_PRIVATE_KEY: z.string(),
+  DOCLING_API_KEY: z.string(),
+  DOCLING_PORT: portType,
+  DOCLING_HOST: z.string(),
+  OLLAMA_PORT: portType,
+  OLLAMA_MODEL: z.string(),
+  OLLAMA_HOST: z.string(),
+  AWS_REGION: z.string(),
+  STORAGE_ENDPOINT: z.string().optional(),
+  STORAGE_ACCESS_KEY: z.string(),
+  STORAGE_SECRET_KEY: z.string(),
+  STORAGE_BUCKET: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

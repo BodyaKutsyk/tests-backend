@@ -80,6 +80,22 @@ export class Helper {
     });
   }
 
+  async waitForReady(port: number) {
+    const deadline = Date.now() + 30_000;
+
+    while (Date.now() < deadline) {
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}/health`);
+
+        if (response.ok) return;
+      } catch {}
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+
+    throw new Error(`API on port ${port} did not become ready`);
+  }
+
   async get<T>(path: string, headers: Record<string, string> = {}) {
     const response = await fetch(
       `http://localhost:${Number(process.env.API_PORT || 3000)}${path}`,
@@ -219,19 +235,19 @@ export class Helper {
   async createTest(
     data: CreateTest,
     idempotencyKey: string,
-    userId?: string,
+    accessToken: string,
     skipPublish?: boolean,
   ): Promise<CreateTestResponse> {
     const response = await fetch(
       `http://localhost:${Number(process.env.API_PORT || 3000)}/tests`,
       {
         method: 'POST',
-        body: JSON.stringify({ ...data, userId }),
+        body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idempotencyKey,
           'Skip-Publish': String(skipPublish),
-          ...(userId ? { 'user-id': userId } : {}),
+          Authorization: `Bearer ${accessToken}`,
         },
       },
     );

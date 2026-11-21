@@ -28,8 +28,7 @@ export class CreateTestDto {
         ((value >= 1 && value <= 30) ||
           value === BRAKE_TRANSACTION_NUM ||
           value === BRAKE_OUTBOX_RELAY_NUM),
-      defaultMessage: () =>
-        'questionCount must be between 1 and 30 or a demo trigger value',
+      defaultMessage: () => 'questionCount must be between 1 and 20',
     },
   })
   questionCount: number;

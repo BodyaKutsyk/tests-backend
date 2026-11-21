@@ -4,6 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import type { Client } from 'pg';
 import { from as copyFrom } from 'pg-copy-streams';
 import { escapeCsv } from '../../src/utils/escape-csv.js';
+import getRandomBase64 from '../../src/utils/get-random-base64.js';
 
 const DOCUMENTS_COUNT = 100_000;
 
@@ -22,6 +23,7 @@ async function* generateDocuments(userIds: string[]) {
       fileSize,
       fileStorageKey,
       userId,
+      getRandomBase64(),
       faker.date.past({ years: 1 }).toISOString(),
     ]
       .map(escapeCsv)
@@ -37,7 +39,7 @@ export async function seedDocuments(client: Client) {
   );
   const copyStream = client.query(
     copyFrom(
-      `COPY documents (name, mime_type, size, storage_key, user_id, created_at) FROM STDIN WITH (FORMAT CSV)`,
+      `COPY documents (name, mime_type, size, storage_key, user_id, content_md5, created_at) FROM STDIN WITH (FORMAT CSV)`,
     ),
   );
   const userIds = rows.map(({ id }) => id);

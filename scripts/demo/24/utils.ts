@@ -1,6 +1,11 @@
 import { Helper, type HttpResult } from '../../utils/helper.js';
 import { randomUUID } from 'crypto';
 import { Role, User } from '../../../src/entities/user.js';
+import {
+  DocumentCommitResponse,
+  IntentBulkUploadResponse,
+} from '../../../src/documents/types/response.js';
+import { DocumentUploadType } from '../../../src/entities/document.js';
 
 interface AuthResponse {
   accessToken: string;
@@ -8,12 +13,54 @@ interface AuthResponse {
   expiresIn: number;
 }
 
+interface PutResult {
+  status: number;
+  etag: string | null;
+}
+
 interface GetUsersProps {
   accessToken: string;
 }
 
+interface MultipartPart {
+  partNumber: number;
+  uploadUrl: string;
+}
+
+interface UploadedPart {
+  PartNumber: number;
+  ETag: string;
+}
+
+type UploadBody = Blob | Buffer | Uint8Array<ArrayBuffer>;
+
+interface IntentDocumentUpload {
+  contentMd5: string;
+  clientId: string;
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+interface IntentDocumentsUploadPayload {
+  documents: IntentDocumentUpload[];
+}
+
+interface UploadFileSingleResponse {
+  id: string;
+  fileName: string;
+  status: string;
+  type: DocumentUploadType;
+  clientId: string;
+}
+
+export interface UploadFileMultipartResponse extends UploadFileSingleResponse {
+  parts: MultipartPart[];
+  partSize: number;
+}
+
 interface UploadFilesResponse {
-  items: { id: string; fileName: string; status: string }[];
+  items: (UploadFileMultipartResponse | UploadFileSingleResponse)[];
 }
 
 interface UploadFile {
@@ -64,6 +111,15 @@ export class Helper24 extends Helper {
       .execute();
   }
 
+  async intentUploads(
+    documents: IntentDocumentsUploadPayload,
+    accessToken: string,
+  ) {
+    return this.post<IntentBulkUploadResponse[]>('/files/intent', documents, {
+      Authorization: `Bearer ${accessToken}`,
+    });
+  }
+
   async postFiles(
     files: UploadFile[],
     headers: Record<string, string> = {},
@@ -91,6 +147,8 @@ export class Helper24 extends Helper {
         body: formData,
       },
     );
+
+    console.log(response);
 
     if (!response.ok) {
       return {
@@ -125,5 +183,58 @@ export class Helper24 extends Helper {
 
   encodeJwtPayload(payload: Record<string, unknown>): string {
     return Buffer.from(JSON.stringify(payload)).toString('base64url');
+  }
+
+  async putToS3(
+    url: string,
+    body: UploadBody,
+    headers: Record<string, string> = {},
+  ): Promise<PutResult> {
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `S3 upload failed: ${response.status} ${await response.text()}`,
+      );
+    }
+
+    return {
+      status: response.status,
+      etag: response.headers.get('etag'),
+    };
+  }
+
+  async bulkCommit(documentIds: string[], accessToken: string) {
+    return this.post<DocumentCommitResponse[]>(
+      '/files/commit',
+      { documentIds },
+      { Authorization: `Bearer ${accessToken}` },
+    );
+  }
+
+  async uploadMultipart(
+    file: Blob,
+    intent: UploadFileMultipartResponse,
+    start = 0,
+    end = intent.parts.length,
+  ): Promise<void> {
+    const results = await Promise.allSettled(
+      intent.parts.slice(start, end).map(async ({ partNumber, uploadUrl }) => {
+        const start = (partNumber - 1) * intent.partSize;
+        const end = Math.min(start + intent.partSize, file.size);
+
+        await this.putToS3(uploadUrl, file.slice(start, end));
+      }),
+    );
+
+    const failed = results.filter((result) => result.status === 'rejected');
+
+    if (failed.length) {
+      throw new Error(`${failed.length} multipart uploads failed`);
+    }
   }
 }

@@ -9,7 +9,12 @@ import { Channel } from 'amqplib';
 import { Subject } from 'rxjs';
 import { Repository } from 'typeorm';
 import { GenerationJobCreatedEvent } from '../contracts/generation/events.js';
-import { GENERATION_JOBS_ROUTING_KEYS } from '../contracts/generation/constants.js';
+import {
+  GENERATION_JOBS_ROUTING_KEYS,
+  GENERATION_JOBS_RETRY_QUEUE,
+  GENERATION_JOBS_MAX_DOCUMENT_RETRIES,
+} from '../contracts/generation/constants.js';
+import { DocumentNotReadyError } from './document-not-ready.error.js';
 import { GenerationJob } from '../entities/generation-job.js';
 import { InboxService } from '../inbox/inbox.service.js';
 import { RabbitMqService } from '../rabbit-mq/rabbit-mq.service.js';
@@ -25,9 +30,6 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
     new Subject<GenerationJobCreatedEvent>();
   private readonly rejectionsSubject = new Subject<GenerationJobCreatedEvent>();
   private readonly logger = new Logger(this.constructor.name);
-  readonly deliveries$ = this.deliveriesSubject.asObservable();
-  readonly acknowledgements$ = this.acknowledgementsSubject.asObservable();
-  readonly rejections$ = this.rejectionsSubject.asObservable();
 
   constructor(
     @Inject(RabbitMqService)
@@ -71,18 +73,50 @@ export class GenerationJobsConsumer implements OnApplicationBootstrap {
             this.logger.warn('Could not report generation job delivery', error);
           }
 
-          const isNew = await manager.transaction(async (entityManager) => {
-            const inbox = await this.inboxService.save(
-              { messageId: event.id, consumer: this.constructor.name },
-              entityManager,
-            );
-            return inbox.raw.length > 0;
-          });
-
-          if (isNew) await this.workflow.process(event.id);
+          const inboxEntry = {
+            messageId: event.eventId,
+            consumer: this.constructor.name,
+          };
+          if (!(await this.inboxService.exists(inboxEntry, manager))) {
+            await this.workflow.process(event.id, inboxEntry);
+          }
           this.channel.ack(data);
           this.acknowledgementsSubject.next(event);
-        } catch {
+        } catch (error) {
+          if (error instanceof DocumentNotReadyError) {
+            const retries = event.documentRetryCount ?? 0;
+            if (retries < GENERATION_JOBS_MAX_DOCUMENT_RETRIES) {
+              try {
+                await this.rabbitMQService.publish({
+                  exchange: '',
+                  routingKey: GENERATION_JOBS_RETRY_QUEUE,
+                  payload: { ...event, documentRetryCount: retries + 1 },
+                });
+                this.channel.ack(data);
+              } catch (publishError) {
+                this.logger.error(
+                  `Could not schedule retry for job ${event.id}`,
+                  publishError,
+                );
+                this.channel.nack(data, false, true);
+              }
+              return;
+            }
+            try {
+              await this.workflow.failWaitingJob(event.id);
+            } catch (updateError) {
+              this.logger.error(
+                `Could not mark job ${event.id} as failed`,
+                updateError,
+              );
+              this.channel.nack(data, false, true);
+              return;
+            }
+          }
+          this.logger.error(
+            `Failed to process generation job event ${event.id}`,
+            error,
+          );
           this.channel.nack(data, false, false);
           this.rejectionsSubject.next(event);
         }

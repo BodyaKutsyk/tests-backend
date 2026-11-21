@@ -31,18 +31,19 @@ export class TestsController {
     private readonly generationJobEventService: GenerationJobsEventService,
   ) {}
 
-  @RequireHeaders('X-Idempotency-Key', 'user-id')
+  @RequireHeaders('X-Idempotency-Key')
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   async create(
     @Body() createTestDto: CreateTestDto,
     @Res({ passthrough: true }) res: Response,
-    @Headers('user-id') userId: string,
+    @Req() req: AuthenticatedRequest,
     @Headers('X-Idempotency-Key') idempotencyKey: string,
     @Headers('skip-publish') skipPublish?: string,
   ): Promise<CreateTestResponseDto> {
     const operation = operations.get(idempotencyKey);
     if (operation) return operation;
+    const userId = req.user.id;
 
     const job = await this.testsService.create(
       createTestDto,

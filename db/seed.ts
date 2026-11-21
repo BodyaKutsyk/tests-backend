@@ -1,4 +1,4 @@
-import {Client} from 'pg'
+import { Client } from 'pg';
 import { seedUsers } from './seeds/seed-users.js';
 import { seedDocuments } from './seeds/seed-documents.js';
 import { seedTests } from './seeds/seed-tests.js';
@@ -16,21 +16,21 @@ async function seed() {
   const isSeeded = result.rows[0].exists;
 
   if (isSeeded) {
-    console.log('The database has already been seeded')
-    process.exit()
+    console.log('The database has already been seeded');
+    process.exit();
   }
 
   try {
-   await seedUsers(client);
-   await seedDocuments(client);
-   await seedTests(client);
+    await seedUsers(client);
+    await seedDocuments(client);
+    await seedTests(client);
   } finally {
     await client.end();
-    console.log('Successfully seeded the database')
+    console.log('Successfully seeded the database');
   }
 }
 
 seed().catch((error) => {
   console.error(error);
   process.exit(1);
-})
+});

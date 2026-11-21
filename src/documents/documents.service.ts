@@ -1,20 +1,44 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Document } from '../entities/document.js';
+import {
+  Document,
+  DocumentStatus,
+  DocumentUploadType,
+} from '../entities/document.js';
 import { Repository } from 'typeorm';
 import { determineMimeType } from './utils/determine-mime-type.js';
 import { QuotasService } from '../quotas/quotas.service.js';
 import { QuotaType } from '../entities/quota.js';
 import {
+  CommitBulkUploadDto,
+  DocumentUploadIntentDto,
   FileUploadResponse,
   UploadFilesResponseDto,
 } from './types/document.dto.js';
 import { NotFoundProblem } from '../exceptions/problem-errors.js';
+import { DocumentsPublisher } from './documents.publisher.js';
+import { StorageService } from '../storage/storage.service.js';
+import {
+  DocumentCommitResponse,
+  IntentBulkUploadResponse,
+} from './types/response.js';
+import calculatePartSize, {
+  MIN_PART_SIZE,
+} from './utils/calculate-part-size.js';
 
-// will be replaced with JWT
+interface CommitUploadProps {
+  userId: string;
+  documentId: string;
+}
+
+interface MultipartUploadIntentProps {
+  userId: string;
+  documentDto: DocumentUploadIntentDto;
+}
+
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -22,6 +46,8 @@ export class DocumentsService {
     private readonly documentRepo: Repository<Document>,
     @Inject(QuotasService)
     private readonly quotaService: QuotasService,
+    private readonly documentsPublisher: DocumentsPublisher,
+    private readonly storageService: StorageService,
   ) {}
 
   async upload(
@@ -43,23 +69,27 @@ export class DocumentsService {
       const path = join(directory, fileName);
 
       try {
-        const mimeType = await determineMimeType(
-          file.buffer,
-          file.originalname,
-        );
+        return this.documentRepo.manager.transaction(async (manager) => {
+          const mimeType = await determineMimeType(
+            file.buffer,
+            file.originalname,
+          );
 
-        await writeFile(path, file.buffer);
-        const document = await this.documentRepo.save(
-          this.documentRepo.create({
-            storageKey: fileName,
-            name: file.originalname,
-            mimeType,
-            size: file.size,
-            user: { id: userId },
-          }),
-        );
+          await writeFile(path, file.buffer);
+          const document = await manager.save(
+            this.documentRepo.create({
+              storageKey: fileName,
+              name: file.originalname,
+              mimeType,
+              size: file.size,
+              user: { id: userId },
+            }),
+          );
 
-        return { id: document.id, fileName, path };
+          await this.documentsPublisher.uploaded(document, manager);
+
+          return { id: document.id, fileName, path };
+        });
       } catch (e) {
         await rm(path, { force: true });
         throw e;
@@ -109,7 +139,7 @@ export class DocumentsService {
     return `This action returns all files`;
   }
 
-  findOne(id: string) {
+  getInfoById(id: string) {
     return this.documentRepo.findOne({
       where: { id },
       relations: { user: true },
@@ -130,5 +160,278 @@ export class DocumentsService {
     }
 
     await this.documentRepo.softDelete(documentIds);
+  }
+
+  async createOrGetDocument(document: Document) {
+    const result = await this.documentRepo
+      .createQueryBuilder()
+      .insert()
+      .into(Document)
+      .values(document)
+      .orIgnore()
+      .returning('*')
+      .execute();
+
+    if (result.raw.length > 0) {
+      return this.documentRepo.findOneByOrFail({ id: result.raw[0].id });
+    }
+
+    return this.documentRepo.findOneByOrFail({
+      contentMd5: document.contentMd5,
+      user: { id: document.user.id },
+    });
+  }
+
+  private async singleUploadIntent(
+    documentDto: DocumentUploadIntentDto,
+    userId: string,
+  ): Promise<IntentBulkUploadResponse> {
+    const storageKey = this.storageService.generateUploadUrlKey(
+      userId,
+      extname(documentDto.name),
+    );
+    const documentPayload = this.documentRepo.create({
+      storageKey,
+      name: documentDto.name,
+      size: documentDto.size,
+      mimeType: documentDto.contentType,
+      contentMd5: documentDto.contentMd5,
+      user: { id: userId },
+    });
+
+    const document = await this.createOrGetDocument(documentPayload);
+
+    switch (document.status) {
+      case DocumentStatus.Failed:
+        return {
+          clientId: documentDto.clientId,
+          errors: ['Failed to create presigned url for this document'],
+          status: DocumentStatus.Failed,
+        };
+      case DocumentStatus.Completed:
+        return {
+          id: document.id,
+          clientId: documentDto.clientId,
+          status: DocumentStatus.Completed,
+        };
+      case DocumentStatus.Pending:
+        const uploadUrl = await this.storageService.createUploadUrl({
+          key: document.storageKey,
+          md5: document.contentMd5,
+          contentType: document.mimeType,
+        });
+
+        return {
+          id: document.id,
+          clientId: documentDto.clientId,
+          uploadUrl,
+          status: DocumentStatus.Pending,
+          type: DocumentUploadType.Single,
+        };
+    }
+  }
+
+  private async multipartUploadIntent({
+    documentDto,
+    userId,
+  }: MultipartUploadIntentProps): Promise<IntentBulkUploadResponse> {
+    const partSize = calculatePartSize(documentDto.size);
+    const storageKey = this.storageService.generateUploadUrlKey(
+      userId,
+      extname(documentDto.name),
+    );
+
+    const multipartUploadIntent =
+      await this.storageService.createMultipartUpload({
+        contentType: documentDto.contentType,
+        key: storageKey,
+      });
+
+    const documentPayload = this.documentRepo.create({
+      storageKey,
+      name: documentDto.name,
+      size: documentDto.size,
+      mimeType: documentDto.contentType,
+      contentMd5: documentDto.contentMd5,
+      uploadType: DocumentUploadType.Multipart,
+      uploadId: multipartUploadIntent.UploadId,
+      partSize,
+      user: { id: userId },
+    });
+
+    const document = await this.createOrGetDocument(documentPayload);
+    const partCount = Math.ceil(document.size / partSize);
+
+    const parts = await this.storageService.getMultipartUploadParts({
+      storageKey,
+      uploadId: document.uploadId as string,
+      parts: partCount,
+    });
+
+    return {
+      partSize,
+      parts,
+      status: DocumentStatus.Pending,
+      type: DocumentUploadType.Multipart,
+      id: document.id,
+      clientId: documentDto.clientId,
+    };
+  }
+
+  async initUploadIntent(
+    documentDto: DocumentUploadIntentDto,
+    userId: string,
+  ): Promise<IntentBulkUploadResponse> {
+    try {
+      if (documentDto.size >= MIN_PART_SIZE) {
+        return this.multipartUploadIntent({ documentDto, userId });
+      }
+
+      return this.singleUploadIntent(documentDto, userId);
+    } catch (error) {
+      console.log(error);
+      return {
+        clientId: documentDto.clientId,
+        errors: ['Failed to create presigned url for this document'],
+        status: DocumentStatus.Failed,
+      };
+    }
+  }
+
+  async intendBulkUpload(
+    documents: DocumentUploadIntentDto[],
+    userId: string,
+  ): Promise<IntentBulkUploadResponse[]> {
+    const requests = documents.map(async (documentDto) =>
+      this.initUploadIntent(documentDto, userId),
+    );
+
+    return Promise.all(requests);
+  }
+
+  private async commitMultipartUpload(document: Document): Promise<void> {
+    if (!document.uploadId || !document.partSize) {
+      throw new Error('Multipart upload is not initialized');
+    }
+
+    const existingObject = await this.storageService
+      .headObject(document.storageKey)
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          (error.name === 'NotFound' || error.name === 'NoSuchKey')
+        ) {
+          return null;
+        }
+
+        throw error;
+      });
+
+    if (existingObject) {
+      if (existingObject.ContentLength !== document.size) {
+        throw new Error('Existing object size mismatch');
+      }
+
+      return;
+    }
+
+    const parts = await this.storageService.listUploadedParts(
+      document.storageKey,
+      document.uploadId,
+    );
+
+    this.storageService.validateMultipartParts(
+      parts,
+      document.size,
+      document.partSize,
+    );
+
+    await this.storageService.completeMultipart(
+      document.storageKey,
+      document.uploadId,
+      parts,
+    );
+  }
+
+  async commitUpload({
+    userId,
+    documentId,
+  }: CommitUploadProps): Promise<DocumentCommitResponse> {
+    const document = await this.documentRepo.findOneBy({
+      id: documentId,
+      user: { id: userId },
+    });
+
+    if (!document) {
+      return {
+        id: documentId,
+        status: DocumentStatus.Failed,
+        errors: ['Document does not exist'],
+      };
+    }
+
+    if (document.status === DocumentStatus.Completed) {
+      return {
+        id: documentId,
+        status: DocumentStatus.Completed,
+      };
+    }
+
+    try {
+      if (document.uploadId) {
+        await this.commitMultipartUpload(document);
+      }
+
+      const object = await this.storageService.headObject(document.storageKey);
+      const errors = this.storageService.validateUploadedObject(
+        object,
+        document,
+      );
+
+      if (errors.length) {
+        return {
+          id: document.id,
+          status: DocumentStatus.Failed,
+          errors,
+        };
+      }
+
+      await this.documentRepo.update(
+        {
+          id: document.id,
+          user: { id: userId },
+          status: DocumentStatus.Pending,
+        },
+        { status: DocumentStatus.Completed },
+      );
+
+      return {
+        id: document.id,
+        status: DocumentStatus.Completed,
+      };
+    } catch (e) {
+      const errors: string[] = [];
+
+      if (e instanceof Error) {
+        errors.push(e.message);
+      }
+
+      return {
+        id: document.id,
+        status: DocumentStatus.Failed,
+        errors,
+      };
+    }
+  }
+
+  async bulkUploadCommit(
+    documents: CommitBulkUploadDto,
+    userId: string,
+  ): Promise<DocumentCommitResponse[]> {
+    return Promise.all(
+      documents.documentIds.map((documentId) =>
+        this.commitUpload({ documentId, userId }),
+      ),
+    );
   }
 }

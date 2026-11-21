@@ -17,10 +17,10 @@ export class DocumentsGarbageCollectorConsumer extends WorkerHost {
   async process(job: Job) {
     if (job.data?.demoRetry === true) {
       if (job.attemptsMade < 2) {
-        throw new Error("Intentional demo failure to exercise BullMQ retry");
+        throw new Error('Intentional demo failure to exercise BullMQ retry');
       }
       await job.updateProgress(100);
-      return { demoRetry: "succeeded" };
+      return { demoRetry: 'succeeded' };
     }
 
     const documents = await this.documentRepository
@@ -35,7 +35,6 @@ export class DocumentsGarbageCollectorConsumer extends WorkerHost {
       successful.push(document.id);
     }
 
-    console.log(documents);
     await this.documentRepository.delete({ id: In(successful) });
     await job.updateProgress(100);
   }
