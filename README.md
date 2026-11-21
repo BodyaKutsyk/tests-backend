@@ -232,6 +232,8 @@ The broker reported that all required verification results were published and su
 | `REDIS_CACHE_HOST`        | Host used to connect to the Redis Cache                                          |
 | `REDIS_CACHE_PORT`        | Port used to connect to the Redis Cache                                          |
 | `REDIS_PASSWORD`          | Password for the Redis                                                           | 
+| `JWT_PUBLIC_KEY`          | Secret used to verify and validate JWT                                           |
+| `JWT_PRIVATE_KEY`         | Secret used to create and sign JWT                                               |
 
 ### How to start
 
@@ -575,4 +577,36 @@ skipped=1
 `prefetch=4` limits the number of unacknowledged messages. Each job has two 5-second stages, and the workflow checks its state every 6 seconds: up to 22 seconds per job, or about 88 seconds for four concurrent messages.
 
 RabbitMQ provides at-least-once delivery: if an ack is lost, a message may be delivered again. Processing must therefore be idempotent. The duplicate demo publishes the same event twice and checks that the job completes once and redelivery does not create a second effect.
+
+## Authentication and Authorization
+
+The API uses `@nestjs/authentication` for bearer-token authentication. `AuthenticationGuard` is registered globally in `AppModule`. `JwtAuth`, registered in `AuthenticationRegistry`, verifies the access JWT, checks its `sid` against the Redis session-family record, and loads the current user. Authenticated requests expose that user through `request.user` and `@CurrentUser()`.
+
+### Sign-up, sign-in, refresh, and sign-out
+
+`POST /auth/sign-up` and `POST /auth/sign-in` return a short-lived access JWT and an opaque refresh token. Refresh tokens are stored in Redis by their SHA-256 ID. Each sign-in starts a token family; refresh rotates the single-use refresh token while keeping the new token in the same family. The family record tracks the user, `sid`, role snapshot, revocation state, idle activity, and absolute expiration.
+
+Redis Lua scripts perform the state changes atomically. `markRefreshTokenUsed` is a compare-and-set operation. Reusing a spent refresh token revokes its whole family. Access-token validation checks the family through the `sid` index, so revocation also prevents later requests made with access tokens from that family. `POST /auth/sign-out` revokes the family associated with the supplied refresh token and returns `204 No Content`.
+
+### Role and document access
+
+Users have one `Role` value (`customer` or `admin`). `@Roles(Role.Admin)` marks routes that require the admin role, and the global `RolesGuard` checks the authenticated user's current role. For example, `GET /users` is admin-only. Document upload accepts `.pdf`, `.txt`, and `.md` files as multipart data under the `files` field. `GET /files/:id` compares the document owner with the authenticated user and is intended to return `403` for another user's document. The current service lookup does not explicitly load the `user` relation, so this check should load that relation or compare the foreign key directly before relying on that behavior.
+
+### Running the demos
+
+Start the development stack first so the API, PostgreSQL, and Redis are available:
+
+```bash
+pnpm docker:start:dev
+```
+
+Run the homework scripts from the repository root:
+
+```bash
+pnpm demo:auth
+pnpm demo:reuse
+pnpm demo:rbac
+```
+
+The auth demo checks sign-up, access-token requirements, refresh, and sign-out. The RBAC demo checks anonymous access, document ownership, the admin-only users route, and rejection of a malformed token. The reuse demo is intended to check refresh-token replay and family revocation; its current implementation passes access tokens to `/auth/refresh` for the `r1-reuse` and `r2-after-reuse` requests, so those checks do not yet demonstrate refresh-token replay or family revocation. To verify replay behavior, the repeated request must submit the already-used `r1RefreshToken` to `/auth/refresh`, then check that both access tokens are rejected.
 

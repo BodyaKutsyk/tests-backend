@@ -9,7 +9,6 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 
 import { seedUsers } from '../db/seeds/seed-users.js';
 import { Client } from 'pg';
-import { SessionService } from '../src/auth/session/session.service.js';
 import { REDIS_QUEUE_CLIENT } from '../src/redis/constants.js';
 import { getRedisSessionKey } from '../src/contracts/session/constants.js';
 import { Redis } from 'ioredis';
@@ -58,14 +57,13 @@ describe('Provider Verification', () => {
           await client.query('TRUNCATE TABLE users CASCADE');
           await seedUsers(client, 10);
           const [{ id: userId }] = (
-            await client.query('SELECT id FROM users ORDER BY created_at LIMIT 1')
+            await client.query(
+              'SELECT id FROM users ORDER BY created_at LIMIT 1',
+            )
           ).rows;
           const redis = app.get<Redis>(REDIS_QUEUE_CLIENT);
           const sessionId = '123';
           await redis.del(getRedisSessionKey(sessionId));
-          await app
-            .get(SessionService)
-            .create(userId, sessionId, 'pact-refresh-token-hash');
         },
       },
     });

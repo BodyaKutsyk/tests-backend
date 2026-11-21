@@ -47,18 +47,19 @@ export class DocumentsService {
           file.buffer,
           file.originalname,
         );
-        const document = this.documentRepo.create({
-          storageKey: fileName,
-          name: file.originalname,
-          mimeType,
-          size: file.size,
-          user: { id: userId },
-        });
 
         await writeFile(path, file.buffer);
-        await this.documentRepo.save(document);
+        const document = await this.documentRepo.save(
+          this.documentRepo.create({
+            storageKey: fileName,
+            name: file.originalname,
+            mimeType,
+            size: file.size,
+            user: { id: userId },
+          }),
+        );
 
-        return { fileName, path };
+        return { id: document.id, fileName, path };
       } catch (e) {
         await rm(path, { force: true });
         throw e;
@@ -93,6 +94,7 @@ export class DocumentsService {
       }
 
       return {
+        id: result.value.id,
         filename: result.value.fileName,
         status: 'success',
       };
@@ -107,8 +109,11 @@ export class DocumentsService {
     return `This action returns all files`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} file`;
+  findOne(id: string) {
+    return this.documentRepo.findOne({
+      where: { id },
+      relations: { user: true },
+    });
   }
 
   async remove(documentIds: string[]) {
