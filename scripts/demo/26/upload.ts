@@ -174,14 +174,20 @@ async function main() {
     const notUploaded = commited.data.find(
       (doc) => doc.id === documentIdsToCommit[1],
     );
-    const commitWithoutBytes = notUploaded?.status !== DocumentStatus.Failed;
+    const missingBytesItemRejected = Number(
+      notUploaded?.status === DocumentStatus.Failed,
+    );
 
     console.log('intent=', intentStatus);
     console.log('key-from-server=', keyFromServer);
     console.log('api-alive=', apiAlive);
     console.log('put-offline=', putOffline);
     console.log('commit=', commitedStatus);
-    console.log('commit-without-bytes=', commitWithoutBytes);
+    console.log('commit-without-bytes=', commitedStatus);
+    console.log('commit-without-bytes-item-rejected=', missingBytesItemRejected);
+    console.log(
+      `Bulk commit returned HTTP ${commitedStatus}; the missing file was rejected in its item result.`,
+    );
     console.log('tampered=', tamperedStatus);
     console.log('expired=', expiredStatus);
 
@@ -191,7 +197,8 @@ async function main() {
       apiAlive: apiAlive === 0,
       putOffline: putOffline === 200,
       commit: commitedStatus === 200,
-      withoutBytes: !commitWithoutBytes,
+      withoutBytes:
+        commitedStatus === 200 && missingBytesItemRejected === 1,
       tampered: tamperedStatus === 403,
       expired: expiredStatus === 403,
     } satisfies Record<string, boolean>;

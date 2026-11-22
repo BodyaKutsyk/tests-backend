@@ -237,4 +237,58 @@ export class Helper24 extends Helper {
       throw new Error(`${failed.length} multipart uploads failed`);
     }
   }
+
+  async s3Get(key: String) {
+    const bucket = process.env.STORAGE_BUCKET;
+    const region = process.env.AWS_REGION;
+
+    const response = await fetch(
+      `https://${bucket}.s3.${region}.amazonaws.com${key}`,
+    );
+
+    if (!response.ok) {
+      return {
+        status: response.status,
+        data: await response.text(),
+      };
+    }
+
+    const data = await response.text();
+
+    return {
+      response,
+      data,
+      status: response.status,
+    };
+  }
+
+  async cdnGet(
+    path: string,
+    headers: Record<string, string> = {},
+  ): Promise<{ status: number; data: string; cacheStatus: string | null }> {
+    const CDN_PORT = Number(process.env.CDN_PORT || 8081);
+    const CDN_HOST = process.env.CDN_HOST;
+
+    const response = await fetch(`http://${CDN_HOST}:${CDN_PORT}${path}`, {
+      headers: {
+        ...headers,
+      },
+    });
+
+    if (!response.ok) {
+      return {
+        status: response.status,
+        data: await response.text(),
+        cacheStatus: response.headers.get('X-Cache-Status'),
+      };
+    }
+
+    const data = await response.text();
+
+    return {
+      data,
+      status: response.status,
+      cacheStatus: response.headers.get('X-Cache-Status'),
+    };
+  }
 }

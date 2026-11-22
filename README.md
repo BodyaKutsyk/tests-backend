@@ -302,9 +302,23 @@ pnpm demo:queue
 
 The cache Redis is published on port 6380 and the queue Redis on port 6379. The API is published on port 5137 by the development example. `--wait` lets Redis and PostgreSQL become healthy before migrations and demos start. The rate limit demo starts two additional API containers on ports 3001 and 3002.
 
+### File storage and CDN
+
+The demos require a grader-accessible private S3 bucket and `AWS_REGION`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, and `STORAGE_SECRET_KEY` in the environment. Leave `STORAGE_ENDPOINT` unset for AWS S3; do not commit credentials.
+
+With the API and supporting services running, execute:
+
+```bash
+pnpm demo:upload
+pnpm demo:multipart
+pnpm demo:cdn
+```
+
+The CDN demo recreates only its container to start with an empty cache; S3 objects are not deleted.
+
 ### Running without Infisical
 
-Each homework demo runs through `pnpm infisical`. With `SKIP_VAULT=1`, `infisical.sh` loads missing development variables from `.env.example` and runs the demo without contacting Infisical.
+Each demo runs through `pnpm infisical`. With `SKIP_VAULT=1`, `infisical.sh` loads missing development variables from `.env.example` and runs the demo without contacting Infisical.
 
 ### Backup and Restore Drill
 
@@ -605,7 +619,7 @@ Start the development stack first so the API, PostgreSQL, and Redis are availabl
 pnpm docker:start:dev
 ```
 
-Run the homework scripts from the repository root:
+Run the scripts from the repository root:
 
 ```bash
 pnpm demo:auth
@@ -614,4 +628,93 @@ pnpm demo:rbac
 ```
 
 The auth demo checks sign-up, access-token requirements, refresh, and sign-out. The RBAC demo checks anonymous access, document ownership, the admin-only users route, and rejection of a malformed token. The reuse demo is intended to check refresh-token replay and family revocation; its current implementation passes access tokens to `/auth/refresh` for the `r1-reuse` and `r2-after-reuse` requests, so those checks do not yet demonstrate refresh-token replay or family revocation. To verify replay behavior, the repeated request must submit the already-used `r1RefreshToken` to `/auth/refresh`, then check that both access tokens are rejected.
+
+## Files
+
+### Storage configuration
+
+The API uses the private AWS S3 bucket `test-generator-6c6190a1-ba65-46d3` in `eu-north-1`. Public example assets are fetched and cached by the Dockerized NGINX S3 gateway; anonymous direct S3 reads remain forbidden.
+
+| Variable | Purpose | Source |
+| --- | --- | --- |
+| `AWS_REGION` | S3 region (`eu-north-1` for the configured bucket) | Infisical `dev` environment |
+| `STORAGE_BUCKET` | S3 bucket name | Infisical `dev` environment |
+| `STORAGE_ACCESS_KEY` | Access key used by the API and gateway | Infisical `dev` environment; never commit the value |
+| `STORAGE_SECRET_KEY` | Secret key used by the API and gateway | Infisical `dev` environment; never commit the value |
+| `STORAGE_ENDPOINT` | Optional endpoint for an S3-compatible service; unset for AWS S3 | Infisical `dev` environment or grader-provided environment |
+| `CDN_PORT` | Host port mapped to the gateway's container port `80` | Infisical `dev` environment / Compose configuration |
+| `CDN_HOST` | `127.0.0.1` for the host-run CDN demo; `cdn` for container-to-container requests | Demo command / Compose configuration |
+
+Presigned upload URLs expire after 300 seconds: enough time for a client upload while limiting exposure if a URL leaks. The expiry demo uses a one-second URL. Multipart starts at 5 MiB; part size is `max(5 MiB, ceil(file size / 10,000))` to respect S3's 10,000-part limit and minimum non-final part size. The final part may be smaller.
+
+### CDN and cache policy
+
+The edge is the `ghcr.io/nginx/nginx-s3-gateway/nginx-oss-s3-gateway` container. It reads the private origin with server-side credentials and returns cache status in `X-Cache-Status`.
+
+Public assets use content-versioned keys such as `examples/md_sample.<content-digest>.md`; changed content gets a new key and URL, so deployment needs no invalidation. Set this S3 object metadata:
+
+```text
+Cache-Control: public, max-age=31536000, immutable
+```
+
+The gateway's IAM identity needs `s3:GetObject` only for `arn:aws:s3:::test-generator-6c6190a1-ba65-46d3/examples/*`. Keep S3 Block Public Access enabled.
+
+For a CloudFront deployment, use OAC and restrict this bucket policy to the distribution's ARN. Replace `<DISTRIBUTION_ID>`:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontOACReadPublicAssets",
+      "Effect": "Allow",
+      "Principal": { "Service": "cloudfront.amazonaws.com" },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::test-generator-6c6190a1-ba65-46d3/examples/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::674918147932:distribution/<DISTRIBUTION_ID>"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Demo results
+
+```text
+demo:upload
+intent=200
+key-from-server=1
+api-alive=0
+put-offline=200
+commit=200
+commit-without-bytes=200
+commit-without-bytes-item-rejected=1
+tampered=403
+expired=403
+
+demo:multipart
+head-before-complete=true
+resumed-parts=1
+complete=200
+file-match=1
+multipart-completed=1
+
+demo:cdn
+direct=403
+edge-miss=MISS
+edge-miss-status=200
+edge-hit=HIT
+edge-hit-status=200
+cache-hit=1
+new-name=1
+new-url=1
+content-changed=1
+```
+
+Bulk commit returns HTTP `200` for the request and reports a missing object as an item-level failure. Therefore the upload demo prints `commit-without-bytes=200` and `commit-without-bytes-item-rejected=1` instead of expecting a request-level `4xx`.
+
+The multipart demo reports a failed commit before all parts are uploaded and a completed status after the remaining part is sent. The CDN demo compares the configured object names and returned response bodies.
 

@@ -31,6 +31,8 @@ export const envSchema = z.object({
   STORAGE_ACCESS_KEY: z.string(),
   STORAGE_SECRET_KEY: z.string(),
   STORAGE_BUCKET: z.string(),
+  CDN_PORT: portType,
+  CDN_HOST: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

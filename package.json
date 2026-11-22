@@ -63,6 +63,7 @@
     "demo:rbac": "pnpm infisical pnpm exec tsx scripts/demo/24/rbac.ts",
     "demo:upload": "bash scripts/demo/26/start-upload-api.sh && pnpm infisical pnpm exec tsx scripts/demo/26/upload.ts",
     "demo:multipart": "pnpm infisical pnpm exec tsx scripts/demo/26/multipart.ts",
+    "demo:cdn": "pnpm infisical docker compose up -d --force-recreate cdn && CDN_HOST=127.0.0.1 pnpm infisical pnpm exec tsx scripts/demo/26/cdn.ts",
     "report": "pnpm infisical pnpm exec tsx src/report.ts"
   },
   "dependencies": {
