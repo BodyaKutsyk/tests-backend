@@ -164,32 +164,25 @@ async function main() {
 
     const expiredStatus = expiredResponse.status;
 
-    const commited = await helper.bulkCommit(documentIdsToCommit, accessToken);
+    const missingCommit = await helper.bulkCommit([documentIdsToCommit[1]], accessToken);
+    const commited = await helper.bulkCommit([documentIdsToCommit[0]], accessToken);
     const commitedStatus = commited.status;
 
     if (!commited.ok || !('data' in commited)) {
       throw new Error('Failed to cmmmit');
     }
 
-    const notUploaded = commited.data.find(
-      (doc) => doc.id === documentIdsToCommit[1],
-    );
-    const missingBytesItemRejected = Number(
-      notUploaded?.status === DocumentStatus.Failed,
-    );
+    const missingBytesItemRejected = Number(missingCommit.status >= 400 && missingCommit.status < 500);
 
-    console.log('intent=', intentStatus);
-    console.log('key-from-server=', keyFromServer);
-    console.log('api-alive=', apiAlive);
-    console.log('put-offline=', putOffline);
-    console.log('commit=', commitedStatus);
-    console.log('commit-without-bytes=', commitedStatus);
-    console.log('commit-without-bytes-item-rejected=', missingBytesItemRejected);
-    console.log(
-      `Bulk commit returned HTTP ${commitedStatus}; the missing file was rejected in its item result.`,
-    );
-    console.log('tampered=', tamperedStatus);
-    console.log('expired=', expiredStatus);
+    console.log(`intent=${intentStatus}`);
+    console.log(`key-from-server=${keyFromServer}`);
+    console.log(`api-alive=${apiAlive}`);
+    console.log(`put-offline=${putOffline}`);
+    console.log(`commit=${commitedStatus}`);
+    console.log(`commit-without-bytes=${missingCommit.status}`);
+    console.log(`commit-without-bytes-item-rejected=${missingBytesItemRejected}`);
+    console.log(`tampered=${tamperedStatus}`);
+    console.log(`expired=${expiredStatus}`);
 
     const checks = {
       intent: intentStatus === 200,
@@ -198,7 +191,7 @@ async function main() {
       putOffline: putOffline === 200,
       commit: commitedStatus === 200,
       withoutBytes:
-        commitedStatus === 200 && missingBytesItemRejected === 1,
+        missingBytesItemRejected === 1,
       tampered: tamperedStatus === 403,
       expired: expiredStatus === 403,
     } satisfies Record<string, boolean>;

@@ -410,6 +410,15 @@ export class DocumentsService {
         status: DocumentStatus.Completed,
       };
     } catch (e) {
+      if (
+        e instanceof Error &&
+        (e.name === 'NotFound' || e.name === 'NoSuchKey')
+      ) {
+        throw new NotFoundProblem({
+          detail: 'Uploaded object does not exist',
+          extensions: { documentId: document.id },
+        });
+      }
       const errors: string[] = [];
 
       if (e instanceof Error) {
@@ -428,10 +437,36 @@ export class DocumentsService {
     documents: CommitBulkUploadDto,
     userId: string,
   ): Promise<DocumentCommitResponse[]> {
-    return Promise.all(
+    const settled = await Promise.allSettled(
       documents.documentIds.map((documentId) =>
         this.commitUpload({ documentId, userId }),
       ),
     );
+    const results: DocumentCommitResponse[] = [];
+    let missingObject = false;
+
+    for (const [index, result] of settled.entries()) {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else if (result.reason instanceof NotFoundProblem) {
+        missingObject = true;
+        results.push({
+          id: documents.documentIds[index],
+          status: DocumentStatus.Failed,
+          errors: [result.reason.detail ?? 'Uploaded object does not exist'],
+        });
+      } else {
+        throw result.reason;
+      }
+    }
+
+    if (missingObject) {
+      throw new NotFoundProblem({
+        detail: 'One or more uploaded objects do not exist',
+        extensions: { results },
+      });
+    }
+
+    return results;
   }
 }

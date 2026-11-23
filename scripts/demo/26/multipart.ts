@@ -1,3 +1,6 @@
+import { HeadObjectCommand } from '@aws-sdk/client-s3';
+import { Document } from '../../../src/entities/document.js';
+import { createDemoS3Client } from './s3.js';
 import { Helper24, UploadFileMultipartResponse } from '../24/utils.js';
 import { randomUUID } from 'crypto';
 import { readFile } from 'node:fs/promises';
@@ -9,6 +12,7 @@ import {
 
 async function main() {
   const helper = new Helper24();
+  const s3 = createDemoS3Client();
 
   try {
     await helper.dataSource.initialize();
@@ -44,7 +48,7 @@ async function main() {
     const intendUpload = results.data[0] as UploadFileMultipartResponse;
 
     if (
-      intendUpload.status === 'pending' &&
+      intendUpload.status !== 'pending' ||
       intendUpload.type !== DocumentUploadType.Multipart
     ) {
       throw new Error('Invalid upload type');
@@ -78,15 +82,22 @@ async function main() {
       }
     }
 
+    const storedDocument = await helper.dataSource.getRepository(Document).findOneByOrFail({ id: documentIdsToCommit[0] });
+    let headBeforeComplete: number;
+    try {
+      const head = await s3.send(new HeadObjectCommand({ Bucket: process.env.STORAGE_BUCKET, Key: storedDocument.storageKey }));
+      headBeforeComplete = head.$metadata.httpStatusCode ?? 0;
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      if (status !== 404) throw error;
+      headBeforeComplete = status;
+    }
+
     const commited = await helper.bulkCommit(documentIdsToCommit, accessToken);
 
     if (!commited.ok || !('data' in commited)) {
       throw new Error('Failed to cmmmit');
     }
-
-    const headBeforeComplete = String(
-      commited.data[0].status === DocumentStatus.Failed,
-    );
 
     if (!('errors' in commited.data[0])) {
       throw new Error('Invalid multipart check');
@@ -129,14 +140,22 @@ async function main() {
         commitedRetry.data[0]?.status === DocumentStatus.Completed,
     );
 
-    console.log('head-before-complete=', headBeforeComplete);
-    console.log('resumed-parts=', expected - received);
-    console.log('complete=', completeStatus);
-    console.log('file-match=', fileMatch);
-    console.log('multipart-completed=', multipartCompleted);
+    const finalHead = await s3.send(new HeadObjectCommand({ Bucket: process.env.STORAGE_BUCKET, Key: storedDocument.storageKey }));
+    const sizeMatch = Number(finalHead.ContentLength === buffer.length);
+    const etagMultipart = Number(/-\d+"?$/.test(finalHead.ETag ?? ''));
+
+    console.log(`head-before-complete=${headBeforeComplete}`);
+    console.log(`size-match=${sizeMatch}`);
+    console.log(`etag-multipart=${etagMultipart}`);
+    console.log(`resumed-parts=${expected - received}`);
+    console.log(`complete=${completeStatus}`);
+    console.log(`file-match=${fileMatch}`);
+    console.log(`multipart-completed=${multipartCompleted}`);
 
     const checks = {
-      headBeforeComplete: headBeforeComplete === 'true',
+      headBeforeComplete: headBeforeComplete === 404,
+      sizeMatch: sizeMatch === 1,
+      etagMultipart: etagMultipart === 1,
       resumedParts: expected - received === 1,
       complete: completeStatus === 200,
       fileMatch: fileMatch === 1,
@@ -156,6 +175,7 @@ async function main() {
     console.error(e);
     process.exitCode = 1;
   } finally {
+    s3.destroy();
     if (helper.dataSource.isInitialized) {
       await helper.dataSource.destroy();
     }
