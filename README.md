@@ -282,6 +282,9 @@ export POSTGRES_HOST=127.0.0.1
 export RABBITMQ_HOST=127.0.0.1
 export REDIS_CACHE_HOST=127.0.0.1
 export REDIS_QUEUE_HOST=127.0.0.1
+export JWT_PRIVATE_KEY="$(openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 | base64 -w 0)"
+export JWT_PUBLIC_KEY="$(printf '%s' "$JWT_PRIVATE_KEY" | base64 -d | openssl pkey -pubout | base64 -w 0)"
+export REFRESH_TOKEN_PEPPER="$(openssl rand -hex 32)"
 pnpm install --frozen-lockfile
 pnpm infisical bash -c 'mkdir -p secrets; printf "%s" "$POSTGRES_USER_PASSWORD" > secrets/db_password'
 pnpm infisical docker compose -f docker-compose.yaml -f docker-compose.grading.yml up -d --wait db pg_bouncer rabbitmq redis-cache redis-queue
@@ -293,6 +296,9 @@ pnpm demo:cache
 pnpm demo:session
 pnpm demo:ratelimit
 pnpm demo:queue
+pnpm demo:auth
+pnpm demo:rbac
+pnpm demo:reuse
 ```
 
 The cache Redis is published on port 6380 and the queue Redis on port 6379. The API is published on port 5137 by the development example. `--wait` lets Redis and PostgreSQL become healthy before migrations and demos start. The rate limit demo starts two additional API containers on ports 3001 and 3002.
@@ -588,9 +594,12 @@ RabbitMQ provides at-least-once delivery: if an ack is lost, a message may be de
 
 The API requires a matching ES256 key pair and sets a five-minute access-token lifetime. Generate separate keys for development and production and store them in the corresponding secret-store environments. The current implementation uses one key and does not yet support `kid`-based overlap during key rotation; replace keys only with a coordinated rollout that accounts for existing access tokens.
 
+ES256 uses ECDSA with the P-256 curve and SHA-256, providing asymmetric signing with compact keys and signatures. For rotation, publish a new public key with a distinct `kid`, sign new tokens with the new private key, and keep the previous public key available until existing tokens expire. This overlap requires verification to select the public key by `kid`; it is not implemented yet.
+
 | Environment | Public key SHA-256 fingerprint (DER SPKI) |
 | --- | --- |
-| Current Infisical environment | `5d0e3c77b0ed787845ba44d9cc25d38319eed0139b6e0ed79a33f223b6defbf1` |
+| Development | `5d0e3c77b0ed787845ba44d9cc25d38319eed0139b6e0ed79a33f223b6defbf1` |
+| Production  | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 
 Sign-out revokes the refresh-token family; access-token authentication checks the associated PostgreSQL session family on each request.
 
