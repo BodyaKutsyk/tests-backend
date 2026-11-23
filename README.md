@@ -232,6 +232,8 @@ The broker reported that all required verification results were published and su
 | `REDIS_CACHE_HOST`        | Host used to connect to the Redis Cache                                          |
 | `REDIS_CACHE_PORT`        | Port used to connect to the Redis Cache                                          |
 | `REDIS_PASSWORD`          | Password for the Redis                                                           | 
+| `JWT_PUBLIC_KEY`          | Secret used to verify and validate JWT                                           |
+| `JWT_PRIVATE_KEY`         | Secret used to create and sign JWT                                               |
 
 ### How to start
 
@@ -280,6 +282,9 @@ export POSTGRES_HOST=127.0.0.1
 export RABBITMQ_HOST=127.0.0.1
 export REDIS_CACHE_HOST=127.0.0.1
 export REDIS_QUEUE_HOST=127.0.0.1
+export JWT_PRIVATE_KEY="$(openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 | base64 -w 0)"
+export JWT_PUBLIC_KEY="$(printf '%s' "$JWT_PRIVATE_KEY" | base64 -d | openssl pkey -pubout | base64 -w 0)"
+export REFRESH_TOKEN_PEPPER="$(openssl rand -hex 32)"
 pnpm install --frozen-lockfile
 pnpm infisical bash -c 'mkdir -p secrets; printf "%s" "$POSTGRES_USER_PASSWORD" > secrets/db_password'
 pnpm infisical docker compose -f docker-compose.yaml -f docker-compose.grading.yml up -d --wait db pg_bouncer rabbitmq redis-cache redis-queue
@@ -291,6 +296,9 @@ pnpm demo:cache
 pnpm demo:session
 pnpm demo:ratelimit
 pnpm demo:queue
+pnpm demo:auth
+pnpm demo:rbac
+pnpm demo:reuse
 ```
 
 The cache Redis is published on port 6380 and the queue Redis on port 6379. The API is published on port 5137 by the development example. `--wait` lets Redis and PostgreSQL become healthy before migrations and demos start. The rate limit demo starts two additional API containers on ports 3001 and 3002.
@@ -575,4 +583,53 @@ skipped=1
 `prefetch=4` limits the number of unacknowledged messages. Each job has two 5-second stages, and the workflow checks its state every 6 seconds: up to 22 seconds per job, or about 88 seconds for four concurrent messages.
 
 RabbitMQ provides at-least-once delivery: if an ack is lost, a message may be delivered again. Processing must therefore be idempotent. The duplicate demo publishes the same event twice and checks that the job completes once and redelivery does not create a second effect.
+
+## Authentication and Authorization
+
+| Variable | Source | Purpose |
+| --- | --- | --- |
+| `JWT_PRIVATE_KEY` | Secret store | ES256 P-256 signing key, PEM or base64-encoded PEM |
+| `JWT_PUBLIC_KEY` | Secret store  | Matching public key used to validate the configured key pair |
+| `REFRESH_TOKEN_PEPPER` | Environment | HMAC key for refresh-token identifiers |
+
+The API requires a matching ES256 key pair and sets a five-minute access-token lifetime. Generate separate keys for development and production and store them in the corresponding secret-store environments. The current implementation uses one key and does not yet support `kid`-based overlap during key rotation; replace keys only with a coordinated rollout that accounts for existing access tokens.
+
+ES256 uses ECDSA with the P-256 curve and SHA-256, providing asymmetric signing with compact keys and signatures. For rotation, publish a new public key with a distinct `kid`, sign new tokens with the new private key, and keep the previous public key available until existing tokens expire. This overlap requires verification to select the public key by `kid`; it is not implemented yet.
+
+| Environment | Public key SHA-256 fingerprint (DER SPKI) |
+| --- | --- |
+| Development | `5d0e3c77b0ed787845ba44d9cc25d38319eed0139b6e0ed79a33f223b6defbf1` |
+| Production  | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+Sign-out revokes the refresh-token family; access-token authentication checks the associated PostgreSQL session family on each request.
+
+The API uses `@nestjs/authentication` for bearer-token authentication. `AuthenticationGuard` is registered globally in `AppModule`. `JwtAuth`, registered in `AuthenticationRegistry`, verifies the access JWT, checks its `sid` against the PostgreSQL session-family record, and loads the current user. Authenticated requests expose that user through `request.user` and `@CurrentUser()`.
+
+### Sign-up, sign-in, refresh, and sign-out
+
+`POST /auth/sign-up` and `POST /auth/sign-in` return a short-lived access JWT and an opaque refresh token. PostgreSQL stores an HMAC of the library's token identifier. Each sign-in starts a token family; refresh rotates the single-use token while keeping the new token in the same family. The family record tracks the user, `sid`, revocation time and absolute expiration.
+
+Refresh rotation runs the library's store calls in one PostgreSQL transaction. A family row lock serializes concurrent refresh and sign-out operations, and reusing a spent refresh token commits family revocation before returning an error. `POST /auth/sign-out` requires both a refresh token and its family's bearer access token. It verifies the access signature and claims, then atomically revokes the family and adds the access token's `jti` to a PostgreSQL denylist until its `exp`. Expired denylist records are removed periodically. Authentication checks both the denylist and family state; the latter also invalidates other access tokens from that family.
+
+### Role and document access
+
+Users have one `Role` value (`customer` or `admin`). `@Roles(Role.Admin)` marks routes that require the admin role, and the global `RolesGuard` checks the authenticated user's current role. For example, `GET /users` is admin-only. The authenticated user is reloaded on each request, so a role change takes effect on the next request. `GET /files/:id` loads the document owner and returns `403` for another user's document.
+
+### Running the demos
+
+Start the development stack first so the API, PostgreSQL, and Redis are available:
+
+```bash
+pnpm docker:start:dev
+```
+
+Run the homework scripts from the repository root:
+
+```bash
+pnpm demo:auth
+pnpm demo:reuse
+pnpm demo:rbac
+```
+
+The auth demo checks sign-in, access-token requirements, refresh, and sign-out. The RBAC demo checks anonymous access, document ownership, the admin-only users route, and rejection of a token with a modified payload and unchanged signature. The reuse demo submits an already-used refresh token and then checks that its successor is rejected.
 

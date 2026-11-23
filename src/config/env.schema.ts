@@ -18,6 +18,9 @@ export const envSchema = z.object({
   REDIS_CACHE_HOST: z.string(),
   REDIS_CACHE_PORT: portType,
   REDIS_PASSWORD: z.string(),
+  JWT_PUBLIC_KEY: z.string().min(1),
+  JWT_PRIVATE_KEY: z.string().min(1),
+  REFRESH_TOKEN_PEPPER: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

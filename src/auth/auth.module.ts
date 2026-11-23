@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
-import { SessionService } from './session/session.service.js';
 import { AuthService } from './auth.service.js';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../entities/user.js';
 import { RedisQueueModule } from '../redis/queue/queue.module.js';
 import { AuthController } from './auth.controller.js';
+import { JwtAuth } from './jwt/jwt-auth.provider.js';
+import { CredentialsService } from './credentials/credentials.service.js';
+import { UsersModule } from '../users/users.module.js';
+import { PostgresAuthStore } from './postgres-auth-store.js';
 
 @Module({
-  imports: [RedisQueueModule, TypeOrmModule.forFeature([User])],
+  imports: [RedisQueueModule, UsersModule],
   controllers: [AuthController],
-  providers: [SessionService, AuthService],
-  exports: [SessionService],
+  providers: [AuthService, JwtAuth, CredentialsService, PostgresAuthStore],
 })
 export class AuthModule {}

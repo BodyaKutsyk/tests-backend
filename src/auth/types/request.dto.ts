@@ -6,7 +6,16 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class LoginRequestDto {
+export class SignInRequestDto {
+  @IsEmail()
+  email: string;
+
+  @IsNotEmpty()
+  @IsString()
+  password: string;
+}
+
+export class SignUpRequestDto {
   @IsEmail()
   email: string;
 
