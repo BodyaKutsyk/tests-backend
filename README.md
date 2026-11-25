@@ -10,6 +10,56 @@ User stories:
 
 You can upload .md/.txt files, set an amount and get wanted tests. Also, you can choose whenever you need open-ended or multiple-choice tests.
 
+## Production image and security
+
+The production image uses a multi-stage build and a distroless Node.js runtime. It runs as `nonroot` without a shell; Infisical injects runtime secrets before starting the application. Docker Compose supplies the project ID and Infisical server address.
+
+```bash
+pnpm docker:start:prod
+docker image inspect api_image --format 'User={{.Config.User}}'
+docker run --rm --entrypoint /bin/sh api_image -c 'echo shell-present'
+```
+
+The shell command should fail because `/bin/sh` is absent. For a local Compose deployment, the non-root process must be able to read `secrets/db_password`; file permissions or ACLs may need adjustment.
+
+### Build secret
+
+The build stage accepts an optional BuildKit secret for demonstration. Set `BUILD_DEMO_SECRET` to a random value in the Infisical `dev` environment, then run:
+
+```bash
+pnpm infisical docker build --no-cache --progress=plain \
+  --target prod \
+  --secret id=build_demo_secret,env=BUILD_DEMO_SECRET \
+  -t api_image:build-secret-demo .
+```
+
+The build checks that the mounted secret is non-empty without writing it to the image. Regular builds do not require the demo secret. For verification, compare its value with the output of `docker history --no-trunc`, `docker image inspect`, and every layer exported with `docker save`; use the same secret value that was supplied at build time. These checks are currently manual.
+
+### Verified output
+
+```text
+User=nonroot:nonroot
+exec: "/bin/sh": stat /bin/sh: no such file or directory
+[Nest] LOG [NestApplication] Nest application successfully started
+```
+
+The shell error is expected for the distroless image. A build with the demo secret completed successfully, and the history check returned:
+
+```text
+OK: secret not found in image history
+```
+
+### Vulnerability scan
+
+Install Trivy and scan the locally available image:
+
+```bash
+npm run scan
+SCAN_IMAGE=api_image SCAN_THRESHOLD=20 npm run scan
+```
+
+The default image is `api_image:build-secret-demo` and the default threshold is 10. The script writes `reports/trivy-report.json`, counts fixable HIGH and CRITICAL vulnerability records, and passes when their total does not exceed the threshold. It exits with code 0 on pass, 1 on threshold failure, and 2 on scan or report errors.
+
 ## Domain
 
 ### User
