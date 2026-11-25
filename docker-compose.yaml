@@ -32,6 +32,14 @@ services:
     extra_hosts: *infisical-hosts
     ports:
       - "${API_PORT}:${API_PORT}"
+    command:
+      - run
+      - --projectId=${INFISICAL_PROJECT_ID}
+      - --env=prod
+      - --domain=http://host.docker.internal:80
+      - --
+      - /nodejs/bin/node
+      - /app/dist/main.js
 
     depends_on:
       pg_bouncer:
